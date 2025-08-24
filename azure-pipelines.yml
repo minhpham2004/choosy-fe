@@ -1,12 +1,8 @@
 trigger:
-- master
+- master 
 
 pool:
   vmImage: ubuntu-latest
-
-variables:
-  uiSource: 'src'
-  uiBuild: '$(uiSource)/dist'
 
 steps:
 - task: NodeTool@0
@@ -14,9 +10,8 @@ steps:
   inputs:
     versionSpec: '18.x'
 
-# Cache npm modules based on the *root* package-lock.json
 - task: Cache@2
-  displayName: 'Cache npm'
+  displayName: 'Cache npm (root lockfile)'
   inputs:
     key: 'npm | "$(Agent.OS)" | $(Build.SourcesDirectory)/package-lock.json'
     restoreKeys: |
@@ -27,12 +22,12 @@ steps:
 - script: |
     npm config set cache $(Pipeline.Workspace)/npm-cache --global
     npm ci
-    npm run build --prefix $(uiSource)
-  displayName: 'Install dependencies & build Vite'
+    npm run build
+  displayName: 'Install deps & build (Vite at repo root)'
 
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish build as artifact'
+  displayName: 'Publish dist as artifact'
   inputs:
-    PathtoPublish: '$(uiBuild)'
+    PathtoPublish: 'dist'
     ArtifactName: 'static'
     publishLocation: 'Container'
