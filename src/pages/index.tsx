@@ -16,7 +16,7 @@ export default function Dashboard() {
         flexGrow: 1,
       }}
     >
-      <Container maxWidth="xl" sx={{ mb: 4 }}>
+      <Container maxWidth="xl" sx={{ mb: 4, mt: 6 }}>
         <Typography variant="h4" gutterBottom>
           Dashboard
         </Typography>
@@ -26,10 +26,10 @@ export default function Dashboard() {
             <CardContent>
               <Typography variant="h6">Start Matching</Typography>
               <Typography variant="body2" sx={{ mb: 2 }}>
-                Practice your vocabulary with fixed pairs.
+                From the lecture halls to lasting bonds.
               </Typography>
               <Button variant="contained" component={RouterLink} to="/matching">
-                Go to Matching
+                Discover Your Match
               </Button>
             </CardContent>
           </Card>
