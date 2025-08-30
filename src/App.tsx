@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import Login from "./pages/auth/login";
 import Register from "./pages/auth/register";
-import ProfileCreation from "./pages/profile/profilecreation";
+import ProfileCreation from "./pages/profile/profile-creation.tsx";
 import Dashboard from "./pages/index.tsx";
 import Navbar from "./layouts/navbar";
 
@@ -16,7 +16,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profilecreation" element={<ProfileCreation />} />
+        <Route path="/profile-creation" element={<ProfileCreation />} />
         <Route path="/" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
