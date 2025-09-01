@@ -11,16 +11,6 @@ import {
   Avatar,
 } from "@mui/material";
 
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
 
 export default function ProfileCreation() {
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
@@ -35,15 +25,15 @@ export default function ProfileCreation() {
     if (!file) return;
 
     // File type validation
-    if (!file.type.startsWith('image/')) return;
+    if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/.test(file.type)) return;
+
     // Max file size validation
     if (file.size > 5 * 1024 * 1024) {
-      alert('Please choose an image under 5MB.');
+      console.warn('Please choose an image under 5MB.');
       return;
     }
 
     const nextUrl = URL.createObjectURL(file);
-
     if (photoPreview) URL.revokeObjectURL(photoPreview);
 
     setPhotoFile(file);
@@ -65,6 +55,8 @@ export default function ProfileCreation() {
 
   const savePFP = () => {
     /* to be created later */
+    if (photoFile) {
+    }
   };
 
   return (
