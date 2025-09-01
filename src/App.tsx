@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import Login from "./pages/auth/login";
 import Register from "./pages/auth/register";
-import ProfileCreation from "./pages/profile/profile-creation.tsx";
+import ProfileCreation from "./pages/profile/profile-creation";
 import Dashboard from "./pages/index.tsx";
 import Navbar from "./layouts/navbar";
 
