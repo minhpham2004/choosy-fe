@@ -1,13 +1,10 @@
 import "./App.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import Login from "./pages/auth/loginTemp.tsx";
-import Register from "./pages/auth/register.tsx";
+import Login from "./pages/auth/login";
+import Register from "./pages/auth/register";
 import Dashboard from "./pages/index.tsx";
 import Navbar from "./layouts/navbar";
-import Matching from "./pages/matching.tsx";
-import Messages from "./pages/messages.tsx";
-import AdminDashboard from "./pages/adminDashboard.tsx";
 
 function App() {
   return (
@@ -19,6 +16,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/profile-creation" element={<ProfileCreation />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/matching" element={<Matching />} />
         <Route path="/messages" element={<Messages />} />
