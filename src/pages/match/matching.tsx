@@ -9,10 +9,10 @@ import {
   CardMedia,
   Chip,
 } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+{/*import { Link as RouterLink } from "react-router-dom";*/}
 
 {/* For the proof of concept demo using a carousel */}
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 {/* Data for demo profiles */}
 
