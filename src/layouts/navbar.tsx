@@ -12,17 +12,30 @@ export default function Navbar() {
 
       <Toolbar>
 
-        {/* Logo */}
+        {/* Logo + Title Links*/}
         <Box
-          component="img"
-          src={ChoosyLogo}
-          alt="Logo"
-          sx={{ height: 40, mr: 1}}
-        />
+          component={RouterLink}
+          to="/"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            textDecoration: "none",
+            color: "inherit",
+            flexGrow: 1,
+            "&:hover": {color: "inherit", background: "none",}
+          }}
+        >
+          <Box
+            component="img"
+            src={ChoosyLogo}
+            alt="Logo"
+            sx={{ height: 40, mr: 1}}
+          />
 
-        <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 'bold', pr: 5 }}>
-          Choosy
-        </Typography>
+          <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 'bold', pr: 5 }}>
+            Choosy
+          </Typography>
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button color="inherit" component={RouterLink} to="/">Dashboard</Button>

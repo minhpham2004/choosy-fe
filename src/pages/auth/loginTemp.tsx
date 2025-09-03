@@ -20,9 +20,15 @@ export default function loginTemp() {
             <TextField label="Email" type="email" fullWidth />
             
             <TextField label="Password" type="password" fullWidth />
+
             <Button variant="contained" fullWidth>
               Sign in
             </Button>
+
+            <Typography>
+              Don't have an account? <a href="/register">Register Now.</a>
+            </Typography>
+
           </Stack>
         </CardContent>
       </Card>

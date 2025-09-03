@@ -7,8 +7,8 @@ import ProfileCreation from "./pages/profile/profile-creation.tsx";
 import Dashboard from "./pages/index.tsx";
 import Navbar from "./layouts/navbar.tsx";
 import Admin from "./pages/admin/admin.tsx";
-import Matching from "./pages/matching.tsx";
-import Messages from "./pages/messages.tsx";
+import Matching from "./pages/match/matching.tsx";
+import Messages from "./pages/messaging/messages.tsx";
 
 function App() {
   return (
