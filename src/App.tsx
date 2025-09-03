@@ -6,6 +6,7 @@ import Register from "./pages/auth/register";
 import ProfileCreation from "./pages/profile/profile-creation";
 import Dashboard from "./pages/index.tsx";
 import Navbar from "./layouts/navbar";
+import AdminDashboard from "./pages/admin/admin.tsx";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile-creation" element={<ProfileCreation />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
