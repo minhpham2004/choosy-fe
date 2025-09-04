@@ -1,12 +1,14 @@
 import "./App.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import Login from "./pages/auth/login";
+import Login from "./pages/auth/loginTemp.tsx";
 import Register from "./pages/auth/register";
-import ProfileCreation from "./pages/profile/profile-creation";
+import ProfileCreation from "./pages/profile/profile-creation.tsx";
 import Dashboard from "./pages/index.tsx";
-import Navbar from "./layouts/navbar";
-import AdminDashboard from "./pages/admin/admin.tsx";
+import Navbar from "./layouts/navbar.tsx";
+import Admin from "./pages/admin/admin.tsx";
+import Matching from "./pages/match/matching.tsx";
+import Messages from "./pages/messaging/messages.tsx";
 
 function App() {
   return (
@@ -18,8 +20,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile-creation" element={<ProfileCreation />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin" element={<Admin />} />
         <Route path="/" element={<Dashboard />} />
+        <Route path="/matching" element={<Matching />} />
+        <Route path="/messages" element={<Messages />} />
       </Routes>
     </BrowserRouter>
   );
