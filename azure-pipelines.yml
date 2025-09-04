@@ -1,0 +1,33 @@
+trigger:
+- master 
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: NodeTool@0
+  displayName: 'Install Node.js'
+  inputs:
+    versionSpec: '18.x'
+
+- task: Cache@2
+  displayName: 'Cache npm (root lockfile)'
+  inputs:
+    key: 'npm | "$(Agent.OS)" | $(Build.SourcesDirectory)/package-lock.json'
+    restoreKeys: |
+      npm | "$(Agent.OS)"
+      npm
+    path: '$(Pipeline.Workspace)/npm-cache'
+
+- script: |
+    npm config set cache $(Pipeline.Workspace)/npm-cache --global
+    npm ci
+    npm run build
+  displayName: 'Install deps & build (Vite at repo root)'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish dist as artifact'
+  inputs:
+    PathtoPublish: 'dist'
+    ArtifactName: 'static'
+    publishLocation: 'Container'
