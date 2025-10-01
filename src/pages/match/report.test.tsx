@@ -1,85 +1,92 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ReportButton from "./report";
-import { vi } from "vitest";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { vi, describe, beforeEach, it, expect } from "vitest";
 
 vi.mock("axios");
 vi.mock("react-hot-toast", () => ({
-    __esModule: true,
-    default: {
-        error: vi.fn(),
-        success: vi.fn(),
-    },
+  __esModule: true,
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+  success: vi.fn(),
+  error: vi.fn(),
 }));
 
-describe("ReportButton", () => {
-    const candidateId = "user123";
+describe("ReportButton Component", () => {
+  const candidateId = "user123";
 
-    beforeEach(() => {
-        vi.clearAllMocks();
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders the Report button", () => {
+    render(<ReportButton candidateId={candidateId} />);
+    expect(screen.getByRole("button", { name: /report/i })).toBeInTheDocument();
+  });
+
+  it("opens dialog on Report button click", async () => {
+    render(<ReportButton candidateId={candidateId} />);
+    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+
+    expect(await screen.findByText(`Report ${candidateId}`)).toBeInTheDocument();
+    expect(screen.getByLabelText(/reason for report/i)).toBeInTheDocument();
+  });
+
+  it("closes dialog on Cancel", async () => {
+    render(<ReportButton candidateId={candidateId} />);
+    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(`Report ${candidateId}`)).not.toBeInTheDocument();
     });
+  });
 
-    it("renders the Report button", () => {
-        render(<ReportButton candidateId={candidateId} />);
-        expect(screen.getByRole("button", { name: /report/i })).toBeInTheDocument();
+  it("shows error toast if reason is empty", async () => {
+    render(<ReportButton candidateId={candidateId} />);
+    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Please enter a reason");
     });
+  });
 
-    it("opens dialog on Report button click", () => {
-        render(<ReportButton candidateId={candidateId} />);
-        fireEvent.click(screen.getByRole("button", { name: /report/i }));
-        expect(screen.getByText(`Report ${candidateId}`)).toBeInTheDocument();
-        expect(screen.getByLabelText(/reason for report/i)).toBeInTheDocument();
+  it("submits report successfully", async () => {
+    (axios.post as any).mockResolvedValueOnce({});
+    render(<ReportButton candidateId={candidateId} />);
+    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+    fireEvent.change(screen.getByLabelText(/reason for report/i), {
+      target: { value: "Spam" },
     });
+    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
 
-    it("closes dialog on Cancel", () => {
-        render(<ReportButton candidateId={candidateId} />);
-        fireEvent.click(screen.getByRole("button", { name: /report/i }));
-        fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
-        expect(screen.queryByText(`Report ${candidateId}`)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith("/match/report", {
+        toUserId: candidateId,
+        reason: "Spam",
+      });
+      expect(toast.success).toHaveBeenCalledWith("Report submitted successfully");
+      expect(screen.queryByText(`Report ${candidateId}`)).not.toBeInTheDocument();
     });
+  });
 
-    it("shows error toast if reason is empty", async () => {
-        render(<ReportButton candidateId={candidateId} />);
-        fireEvent.click(screen.getByRole("button", { name: /report/i }));
-        fireEvent.click(screen.getByRole("button", { name: /submit/i }));
-        await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith("Please enter a reason");
-        });
+  it("shows error toast if submission fails", async () => {
+    (axios.post as any).mockRejectedValueOnce(new Error("fail"));
+
+    render(<ReportButton candidateId={candidateId} />);
+    fireEvent.click(screen.getByRole("button", { name: /report/i }));
+    fireEvent.change(screen.getByLabelText(/reason for report/i), {
+      target: { value: "Abuse" },
     });
+    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
 
-    it("submits report and shows success toast", async () => {
-        (axios.post as any).mockResolvedValue({});
-        render(<ReportButton candidateId={candidateId} />);
-        fireEvent.click(screen.getByRole("button", { name: /report/i }));
-        fireEvent.change(screen.getByLabelText(/reason for report/i), {
-            target: { value: "Spam" },
-        });
-        fireEvent.click(screen.getByRole("button", { name: /submit/i }));
-
-        await waitFor(() => {
-            expect(axios.post).toHaveBeenCalledWith("/match/report", {
-                toUserId: candidateId,
-                reason: "Spam",
-            });
-            expect(toast.success).toHaveBeenCalledWith("Report submitted successfully");
-            expect(screen.queryByText(`Report ${candidateId}`)).not.toBeInTheDocument();
-        });
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to submit report");
+      expect(screen.getByText(`Report ${candidateId}`)).toBeInTheDocument();
     });
-
-    it("shows error toast if failed", async () => {
-        (axios.post as any).mockRejectedValue(new Error("fail"));
-        render(<ReportButton candidateId={candidateId} />);
-        fireEvent.click(screen.getByRole("button", { name: /report/i }));
-        fireEvent.change(screen.getByLabelText(/reason for report/i), {
-            target: { value: "Abuse" },
-        });
-        fireEvent.click(screen.getByRole("button", { name: /submit/i }));
-
-        await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith("Failed to submit report");
-            expect(screen.getByText(`Report ${candidateId}`)).toBeInTheDocument();
-        });
-    });
-
+  });
 });
