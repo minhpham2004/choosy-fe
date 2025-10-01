@@ -1,5 +1,7 @@
+import * as React from "react";
 import {
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Card,
@@ -14,10 +16,12 @@ import { AREA_KEYS } from "../../constant/area";
 import { INTEREST_KEYS } from "../../constant/interest";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { uploadToCloudinary } from "../../utils/upload-image";
 
 // type AreaKey = typeof AREA_KEYS[number];
 // type Interest = typeof INTEREST_KEYS[number];
 
+// Types & Validation Rules
 type registerForm = {
   email: string;
   name: string;
@@ -27,25 +31,25 @@ type registerForm = {
   displayName: string;
   bio: string;
   interests: string[]; 
+  avatarUrl: string;
 };
 
-type registerErrors = Partial<Record<
-  | "email"
-  | "password"
-  | "age"
-  | "areaKey"
-  | "displayName"
-  | "bio"
-  | "interests"
-  , string
->>;
+type registerErrors = Partial<
+  Record< "email" | "password" | "age" | "areaKey" | "displayName" | "bio" | "interests", string>
+>;
 
 const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //Email Regular Expression
 const passwordRule = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // letter + number, at least 8 characters
 const MIN_AGE = 18; //University Students are typically over 18
 
 export default function Register() {
-  const [form, setForm] = useState<registerForm>({
+  // Avatar state
+  const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [photoFile, setPhotoFile] = React.useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  
+  // Form UX state
+  const [form, setForm] = React.useState<RegisterForm>({
     email: "",
     name: "",
     password: "",
@@ -54,11 +58,37 @@ export default function Register() {
     displayName: "",
     bio: "",
     interests: [],
+    avatarUrl: "",
   });
 
   const [errors, setErrors] = useState<registerErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const hasAvatar = !!photoFile || !!form.avatarUrl;
+
+  const pickFile = () => fileInputRef.current?.click();
+
+  const fileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/.test(file.type)) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Please choose an image under 5MB.");
+      return;
+    }
+    const nextUrl = URL.createObjectURL(file);
+    if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(nextUrl);
+  };
+
+  const clearPhoto = () => {
+    if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   function validate(values: Partial<registerForm> = {}): registerErrors {
     const v = { ...form, ...values };
@@ -83,12 +113,12 @@ export default function Register() {
       if (!Number.isFinite(n) || !Number.isInteger(n)) next.age = "Enter a whole number";
       else if (n < MIN_AGE) next.age = `You must be at least ${MIN_AGE}`;
     }
-
+     
     //Bio
     // if (v.bio && v.bio.length > 500) next.bio = "Bio must be 500 characters or less";
 
     return next;
-  }
+  }   
 
   function handleChange<T extends keyof registerForm>(field: T, value: registerForm[T]) {
     const nextForm = { ...form, [field]: value};
@@ -103,16 +133,36 @@ export default function Register() {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
+    if (!hasAvatar) {
+      toast.error("Please upload a profile photo");
+      return;
+    }
+    
     setLoading(true);
     try {
+      let avatarUrl = form.avatarUrl;
+      
+      if (photoFile) {
+        toast.loading("Uploading photo...");
+        avatarUrl = await uploadToCloudinary(photoFile);
+        toast.dimiss();
+        toast.success("Photo Uploaded");
+      }
+      
       const payload = {
         ...form,
         age: Number(form.age),
+        avatarUrl,
     };
 
     const res = await axios.post("/user", payload);
+    
+    if (avatarUrl) localStorage.setItem("pendingAvatarUrl", avatarUrl);
+      
+          
     console.log("✅ User created:", res.data);
-    toast.success("User created successfully!");
+    toast.success("User created successfully! Please Login");
+    window.location.assign("/login");
 
   } catch (err: any) {
     const message =
@@ -125,6 +175,7 @@ export default function Register() {
     setLoading(false);
   }
 }  
+
 
   return (
     <Box sx={{ p: 3, display: "grid", placeItems: "center" }}>
@@ -163,6 +214,32 @@ export default function Register() {
               error = {submitted && !!errors.password}
               helperText = {submitted ? errors.password : "At least 8 chars, must contain a letter & number"}
             />
+
+            {/* Avatar upload */}
+            <Box sx={{ textAlign: "center" }}>
+              <Avatar
+                src={photoPreview ?? undefined}
+                alt="Profile picture"
+                sx={{ width: 96, height: 96, mx: "auto", mb: 1 }}
+              />
+              <Stack direction="row" spacing={1} justifyContent="center">
+                <Button variant="outlined" onClick={pickFile}>
+                  {photoPreview ? "Change photo" : "Upload photo"}
+                </Button>
+                {photoPreview && (
+                  <Button variant="text" color="error" onClick={clearPhoto}>
+                    Remove
+                  </Button>
+                )}
+              </Stack>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={fileChange}
+              />
+            </Box>
 
             {/* Profile fields */}
             {/* Name */}
@@ -233,6 +310,7 @@ export default function Register() {
               fullWidth 
               onClick={handleSubmit}
               loading={loading}
+              disabled={!hasAvatar}
             >
               Sign up
             </Button>
