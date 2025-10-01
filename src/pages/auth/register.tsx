@@ -22,7 +22,7 @@ export default function Register() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
+  
   const [form, setForm] = React.useState({
     email: "",
     name: "",
@@ -34,6 +34,8 @@ export default function Register() {
     interests: [] as string[],
     avatarUrl: "",
   });
+
+  const hasAvatar = !!photoFile || !!form.avatarUrl;
 
   const pickFile = () => fileInputRef.current?.click();
 
@@ -63,6 +65,8 @@ export default function Register() {
   };
 
   const handleSubmit = async () => {
+    if (!hasAvatar) return;
+
     try {
       let avatarUrl = form.avatarUrl;
 
@@ -80,6 +84,8 @@ export default function Register() {
       };
 
       await axios.post("/user", payload);
+
+      if (avatarUrl) localStorage.setItem("pendingAvatarUrl", avatarUrl);
 
       toast.success("Account created! Please log in.");
       window.location.assign("/login");
@@ -204,7 +210,7 @@ export default function Register() {
               )}
             />
 
-            <Button variant="contained" fullWidth onClick={handleSubmit}>
+            <Button variant="contained" fullWidth onClick={handleSubmit} disabled={!hasAvatar}>
               Sign up
             </Button>
           </Stack>
