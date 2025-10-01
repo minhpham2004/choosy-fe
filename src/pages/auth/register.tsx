@@ -49,7 +49,7 @@ export default function Register() {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   
   // Form UX state
-  const [form, setForm] = React.useState<RegisterForm>({
+  const [form, setForm] = React.useState<registerForm>({
     email: "",
     name: "",
     password: "",
@@ -145,7 +145,7 @@ export default function Register() {
       if (photoFile) {
         toast.loading("Uploading photo...");
         avatarUrl = await uploadToCloudinary(photoFile);
-        toast.dimiss();
+        toast.dismiss();
         toast.success("Photo Uploaded");
       }
       
