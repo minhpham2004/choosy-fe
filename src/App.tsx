@@ -1,7 +1,7 @@
 import "./App.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
-import Login from "./pages/auth/loginTemp.tsx";
+import Login from "./pages/auth/login.tsx";
 import Register from "./pages/auth/register";
 import Profile from "./pages/profile/profile.tsx";
 import Dashboard from "./pages/index.tsx";
