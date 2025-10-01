@@ -1,5 +1,7 @@
+import * as React from "react";
 import {
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Card,
@@ -14,9 +16,14 @@ import { AREA_KEYS } from "../../constant/area";
 import { INTEREST_KEYS } from "../../constant/interest";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { uploadToCloudinary } from "../../utils/upload-image";
 
 export default function Register() {
-  const [form, setForm] = useState({
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  
+  const [form, setForm] = React.useState({
     email: "",
     name: "",
     password: "",
@@ -25,27 +32,69 @@ export default function Register() {
     displayName: "",
     bio: "",
     interests: [] as string[],
+    avatarUrl: "",
   });
+
+  const hasAvatar = !!photoFile || !!form.avatarUrl;
+
+  const pickFile = () => fileInputRef.current?.click();
+
+  const fileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/.test(file.type)) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Please choose an image under 5MB.");
+      return;
+    }
+    const nextUrl = URL.createObjectURL(file);
+    if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(nextUrl);
+  };
+
+  const clearPhoto = () => {
+    if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleChange = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
-    const payload = {
-      ...form,
-      age: Number(form.age),
-    };
+    if (!hasAvatar) return;
 
     try {
-      const res = await axios.post("/user", payload);
-      console.log("✅ User created:", res.data);
-      toast.success("User created successfully!");
-    } catch (err) {
-      console.error("Failed to create user:", err);
-      toast.error("Failed to create user");
+      let avatarUrl = form.avatarUrl;
+
+      if (photoFile) {
+        toast.loading("Uploading photo...");
+        avatarUrl = await uploadToCloudinary(photoFile);
+        toast.dismiss();
+        toast.success("Photo uploaded!");
+      }
+
+      const payload = {
+        ...form,
+        age: Number(form.age),
+        avatarUrl,
+      };
+
+      await axios.post("/user", payload);
+
+      if (avatarUrl) localStorage.setItem("pendingAvatarUrl", avatarUrl);
+
+      toast.success("Account created! Please log in.");
+      window.location.assign("/login");
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(err?.response?.data?.message || "Failed to create account");
     }
   };
+
 
   return (
     <Box sx={{ p: 3, display: "grid", placeItems: "center" }}>
@@ -77,6 +126,32 @@ export default function Register() {
               value={form.password}
               onChange={(e) => handleChange("password", e.target.value)}
             />
+
+            {/* Avatar upload */}
+            <Box sx={{ textAlign: "center" }}>
+              <Avatar
+                src={photoPreview ?? undefined}
+                alt="Profile picture"
+                sx={{ width: 96, height: 96, mx: "auto", mb: 1 }}
+              />
+              <Stack direction="row" spacing={1} justifyContent="center">
+                <Button variant="outlined" onClick={pickFile}>
+                  {photoPreview ? "Change photo" : "Upload photo"}
+                </Button>
+                {photoPreview && (
+                  <Button variant="text" color="error" onClick={clearPhoto}>
+                    Remove
+                  </Button>
+                )}
+              </Stack>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={fileChange}
+              />
+            </Box>
 
             {/* Profile fields */}
             <TextField
@@ -135,7 +210,7 @@ export default function Register() {
               )}
             />
 
-            <Button variant="contained" fullWidth onClick={handleSubmit}>
+            <Button variant="contained" fullWidth onClick={handleSubmit} disabled={!hasAvatar}>
               Sign up
             </Button>
           </Stack>
