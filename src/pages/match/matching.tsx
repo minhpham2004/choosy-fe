@@ -97,19 +97,6 @@ export default function Matching() {
   }
 };
 
-const reportUser = async () => {
-  if (!candidate) return;
-  try {
-    await axios.post("/match/report", { toUserId: candidate.userId });
-    toast.success(`You reported ${candidate.displayName}`);
-  } catch (err) {
-    toast.error("Failed to report user");
-  } finally {
-    fetchCandidate();
-    fetchLikes();
-  }
-};
-
   return (
     <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
       <Container maxWidth="sm" sx={{ mb: 4, mt: 6 }}>
