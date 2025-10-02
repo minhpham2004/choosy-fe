@@ -77,6 +77,15 @@ export default function Profile() {
         if (profile.avatarUrl) {
           setPhotoPreview(profile.avatarUrl); // Show saved avatar
         }
+
+        if (!profile.avatarUrl) {
+          const pending = localStorage.getItem("pendingAvatarUrl");
+          if (pending) {
+            setPhotoPreview(pending);
+            setForm((prev) => ({ ...prev, avatarUrl: pending }));
+            localStorage.removeItem("pendingAvatarUrl");
+          }
+        }
       } catch (err: any) {
         toast.error("Failed to load profile");
         console.error(err);
