@@ -21,7 +21,14 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "types": [
+      "vitest/globals",
+      "vitest/importMeta",
+      "vite/client",
+      "@testing-library/jest-dom"
+    ]
   },
   "include": ["src"]
 }
