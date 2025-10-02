@@ -15,6 +15,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { ArrowForwardSharp } from "@mui/icons-material";
+import ReportButton from "./report";
 
 type Profile = {
   userId: string;
@@ -82,6 +83,19 @@ export default function Matching() {
       fetchLikes();
     }
   };
+
+  const blockUser = async () => {
+  if (!candidate) return;
+  try {
+    await axios.post("/match/block", { toUserId: candidate.userId });
+    toast.success(`${candidate.displayName} has been blocked`);
+  } catch (err) {
+    toast.error("Failed to block user");
+  } finally {
+    fetchCandidate();
+    fetchLikes();
+  }
+};
 
   return (
     <Box sx={{ flexGrow: 1, display: "flex", justifyContent: "center" }}>
@@ -159,53 +173,78 @@ export default function Matching() {
               </Stack>
 
               <Stack
-                direction="row"
-                spacing={3}
-                justifyContent="center"
-                sx={{ mt: 2 }}
+              direction="row"
+              spacing={3}
+              justifyContent="center"
+              sx={{ mt: 2 }}
+            >
+              <Button
+                onClick={() => swipe("dislike")}
+                disabled={loading}
+                variant="contained"
+                sx={{
+                  minWidth: 100,
+                  py: 1.2,
+                  bgcolor: "error.main",
+                  "&:hover": { bgcolor: "error.dark" },
+                }}
               >
-                <Button
-                  onClick={() => swipe("dislike")}
-                  disabled={loading}
-                  variant="contained"
-                  sx={{
-                    minWidth: 100,
-                    py: 1.2,
-                    bgcolor: "error.main",
-                    "&:hover": { bgcolor: "error.dark" },
-                  }}
-                >
-                  Skip
-                </Button>
+                Skip
+              </Button>
 
-                <Button
-                  onClick={fetchCandidate}
-                  disabled={loading}
-                  variant="contained"
-                  sx={{
-                    minWidth: 100,
-                    py: 1.2,
-                    bgcolor: "grey.500",
-                    "&:hover": { bgcolor: "grey.600" },
-                  }}
-                >
-                  Next
-                </Button>
+              <Button
+                onClick={fetchCandidate}
+                disabled={loading}
+                variant="contained"
+                sx={{
+                  minWidth: 100,
+                  py: 1.2,
+                  bgcolor: "grey.500",
+                  "&:hover": { bgcolor: "grey.600" },
+                }}
+              >
+                Next
+              </Button>
 
-                <Button
-                  onClick={() => swipe("like")}
-                  disabled={loading}
-                  variant="contained"
-                  sx={{
-                    minWidth: 100,
-                    py: 1.2,
-                    bgcolor: "success.main",
-                    "&:hover": { bgcolor: "success.dark" },
-                  }}
-                >
-                  Like
-                </Button>
-              </Stack>
+              <Button
+                onClick={() => swipe("like")}
+                disabled={loading}
+                variant="contained"
+                sx={{
+                  minWidth: 100,
+                  py: 1.2,
+                  bgcolor: "success.main",
+                  "&:hover": { bgcolor: "success.dark" },
+                }}
+              >
+                Like
+              </Button>
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={3}
+              justifyContent="center"
+              sx={{ mt: 2 }}
+            >
+              <Button
+                onClick={blockUser}
+                disabled={loading}
+                variant="contained"
+                sx={{
+                  minWidth: 100,
+                  py: 1.2,
+                  bgcolor: "warning.main",
+                  "&:hover": { bgcolor: "warning.dark" },
+                }}
+              >
+                Block
+              </Button>
+
+              <ReportButton candidateId={candidate.userId} />
+
+            </Stack>
+
             </CardContent>
           </Card>
         ) : (
