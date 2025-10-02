@@ -34,6 +34,7 @@ describe("Profile Component", () => {
         areaKey: "sydney",
         discoverable: true,
         interests: ["music"],
+        gender: "Man",
         prefs: {
           minAge: 20,
           maxAge: 40,
@@ -48,6 +49,7 @@ describe("Profile Component", () => {
     expect(await screen.findByDisplayValue("John")).toBeInTheDocument();
     expect(screen.getByDisplayValue("30")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Hello world")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("Man")).toBeInTheDocument();
   });
 
   it("lets user edit and save profile", async () => {
@@ -93,6 +95,72 @@ describe("Profile Component", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Bad Request");
+    });
+  });
+
+  it("prefills gender from API and sends it on save", async () => {
+    (axios.get as any).mockResolvedValueOnce({
+      data: {
+        displayName: "John",
+        gender: "Non-binary",
+      },
+    });
+    (axios.put as any).mockResolvedValueOnce({});
+
+    render(<Profile />);
+
+    expect(await screen.findByDisplayValue("Non-binary")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Profile/i }));
+
+    await waitFor(() => {
+      expect(axios.put).toHaveBeenCalledWith(
+        "/profiles",
+        expect.objectContaining({ gender: "Non-binary" })
+      );
+    });
+  });
+
+  it("sends null for gender when left blank", async () => {
+    (axios.get as any).mockResolvedValueOnce({ data: {} });
+    (axios.put as any).mockResolvedValueOnce({});
+
+    render(<Profile />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Save Profile/i }));
+
+    await waitFor(() => {
+      expect(axios.put).toHaveBeenCalledWith(
+        "/profiles",
+        expect.objectContaining({ gender: null })
+      );
+    });
+  });
+
+  it("allows for selecting a different gender and sends it", async () => {
+    (axios.get as any).mockResolvedValueOnce({
+      data: {
+        displayName: "John",
+        gender: "Man",
+      },
+    });
+    (axios.put as any).mockResolvedValueOnce({});
+
+    render(<Profile />);
+
+    const genderSelect = await screen.findByLabelText(/Gender/i);
+    fireEvent.mouseDown(genderSelect);
+
+    const option = await screen.findByRole("option", { name: "Woman" });
+    fireEvent.click(option);
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Profile/i }));
+
+    await waitFor(() => {
+      expect(axios.put).toHaveBeenCalledWith(
+        "/profiles",
+        expect.objectContaining({ gender: "Woman" })
+      );
     });
   });
 });

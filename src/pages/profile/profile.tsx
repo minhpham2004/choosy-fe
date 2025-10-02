@@ -21,6 +21,14 @@ import { uploadToCloudinary } from "../../utils/upload-image";
 
 export const DISTANCE_TIERS = ["near", "mid", "far"] as const;
 
+export const GENDER_OPTIONS = [
+  "Man",
+  "Woman",
+  "Non-binary",
+  "Prefer not to say",
+  "Other",
+] as const;
+
 export default function Profile() {
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
@@ -33,6 +41,7 @@ export default function Profile() {
     avatarUrl: "",
     areaKey: "",
     discoverable: true,
+    gender: "",
     interests: [] as string[],
     prefs: {
       minAge: 18,
@@ -55,6 +64,7 @@ export default function Profile() {
           avatarUrl: profile.avatarUrl || "",
           areaKey: profile.areaKey || "",
           discoverable: profile.discoverable ?? true,
+          gender: profile.gender || "", 
           interests: profile.interests || [],
           prefs: {
             minAge: profile.prefs?.minAge ?? 18,
@@ -66,6 +76,15 @@ export default function Profile() {
 
         if (profile.avatarUrl) {
           setPhotoPreview(profile.avatarUrl); // Show saved avatar
+        }
+
+        if (!profile.avatarUrl) {
+          const pending = localStorage.getItem("pendingAvatarUrl");
+          if (pending) {
+            setPhotoPreview(pending);
+            setForm((prev) => ({ ...prev, avatarUrl: pending }));
+            localStorage.removeItem("pendingAvatarUrl");
+          }
         }
       } catch (err: any) {
         toast.error("Failed to load profile");
@@ -121,6 +140,7 @@ export default function Profile() {
         ...form,
         age: Number(form.age),
         avatarUrl,
+        gender: form.gender || null,
         prefs: {
           ...form.prefs,
           minAge: Number(form.prefs.minAge),
@@ -185,6 +205,21 @@ export default function Profile() {
               value={form.age}
               onChange={(e) => handleChange("age", e.target.value)}
             />
+            
+            <TextField
+              select
+              label="Gender"
+              fullWidth
+              value={form.gender}
+              onChange={(e) => handleChange("gender", e.target.value)}
+            >
+              {GENDER_OPTIONS.map((g) => (
+                <MenuItem key={g} value={g}>
+                  {g}
+                </MenuItem>
+              ))}
+            </TextField>
+          
             <TextField
               label="Bio"
               multiline
