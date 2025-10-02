@@ -52,7 +52,7 @@ export default function Matching() {
 
   const fetchLikes = async () => {
     try {
-      const res = await axios.get("/likes");
+      const res = await axios.get("/match/like");
       setLikesCount(res.data?.length || 0);
     } catch (err) {
       console.error(err);

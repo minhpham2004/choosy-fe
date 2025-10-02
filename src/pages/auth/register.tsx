@@ -18,12 +18,38 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { uploadToCloudinary } from "../../utils/upload-image";
 
+// type AreaKey = typeof AREA_KEYS[number];
+// type Interest = typeof INTEREST_KEYS[number];
+
+// Types & Validation Rules
+type registerForm = {
+  email: string;
+  name: string;
+  password: string;
+  age: string;
+  areaKey: string;
+  displayName: string;
+  bio: string;
+  interests: string[]; 
+  avatarUrl: string;
+};
+
+type registerErrors = Partial<
+  Record< "email" | "password" | "age" | "areaKey" | "displayName" | "bio" | "interests", string>
+>;
+
+const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //Email Regular Expression
+const passwordRule = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/; // letter + number, at least 8 characters
+const MIN_AGE = 18; //University Students are typically over 18
+
 export default function Register() {
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  // Avatar state
+  const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [photoFile, setPhotoFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   
-  const [form, setForm] = React.useState({
+  // Form UX state
+  const [form, setForm] = React.useState<registerForm>({
     email: "",
     name: "",
     password: "",
@@ -31,10 +57,14 @@ export default function Register() {
     areaKey: "",
     displayName: "",
     bio: "",
-    interests: [] as string[],
+    interests: [],
     avatarUrl: "",
   });
 
+  const [errors, setErrors] = useState<registerErrors>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
   const hasAvatar = !!photoFile || !!form.avatarUrl;
 
   const pickFile = () => fileInputRef.current?.click();
@@ -60,40 +90,91 @@ export default function Register() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleChange = (field: string, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  function validate(values: Partial<registerForm> = {}): registerErrors {
+    const v = { ...form, ...values };
+    const next: registerErrors = {};
 
-  const handleSubmit = async () => {
-    if (!hasAvatar) return;
+    //Email
+    if (!v.email) next.email = "Email is required";
+    else if (!emailFormat.test(v.email)) next.email = "Enter a vaild email address";
 
+    //Password
+    if (!v.password) next.password = "Password is required";
+    else if (!passwordRule.test(v.password)) 
+      next.password = "At least 8 characters, with a letter and a number";
+
+    //Display Name
+    if (!v.displayName) next.displayName = "A display name is required";
+
+    //Age
+    if (!v.age?.toString().trim()) next.age = "Age is required";
+    else {
+      const n = Number(v.age);
+      if (!Number.isFinite(n) || !Number.isInteger(n)) next.age = "Enter a whole number";
+      else if (n < MIN_AGE) next.age = `You must be at least ${MIN_AGE}`;
+    }
+     
+    //Bio
+    // if (v.bio && v.bio.length > 500) next.bio = "Bio must be 500 characters or less";
+
+    return next;
+  }   
+
+  function handleChange<T extends keyof registerForm>(field: T, value: registerForm[T]) {
+    const nextForm = { ...form, [field]: value};
+    setForm(nextForm);
+    if (!submitted) return;
+    setErrors((prev) => ({ ...prev, ...validate({ [field]: value }) }));
+  }
+
+  async function handleSubmit() {
+    setSubmitted(true);
+    const next = validate();
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    if (!hasAvatar) {
+      toast.error("Please upload a profile photo");
+      return;
+    }
+    
+    setLoading(true);
     try {
       let avatarUrl = form.avatarUrl;
-
+      
       if (photoFile) {
         toast.loading("Uploading photo...");
         avatarUrl = await uploadToCloudinary(photoFile);
         toast.dismiss();
-        toast.success("Photo uploaded!");
+        toast.success("Photo Uploaded");
       }
-
+      
       const payload = {
         ...form,
         age: Number(form.age),
         avatarUrl,
-      };
+    };
 
-      await axios.post("/user", payload);
+    const res = await axios.post("/user", payload);
+    
+    if (avatarUrl) localStorage.setItem("pendingAvatarUrl", avatarUrl);
+      
+          
+    console.log("✅ User created:", res.data);
+    toast.success("User created successfully! Please Login");
+    window.location.assign("/login");
 
-      if (avatarUrl) localStorage.setItem("pendingAvatarUrl", avatarUrl);
-
-      toast.success("Account created! Please log in.");
-      window.location.assign("/login");
-    } catch (err: any) {
-      toast.dismiss();
-      toast.error(err?.response?.data?.message || "Failed to create account");
-    }
-  };
+  } catch (err: any) {
+    const message =
+      err.response?.data?.message || 
+      err.response?.data ||
+      err.message || "Failed to create user";
+      toast.error(message);
+    console.error("Failed to create user:", message);    
+  } finally {
+    setLoading(false);
+  }
+}  
 
 
   return (
@@ -103,7 +184,9 @@ export default function Register() {
           <Typography variant="h5" gutterBottom>
             Create account
           </Typography>
+
           <Stack spacing={2}>
+            {/* Email */}
             <TextField
               label="Email"
               type="email"
@@ -111,20 +194,25 @@ export default function Register() {
               required
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
+              error={submitted && !!errors.email}
+              helperText={submitted ? errors.email : ""}
             />
+            {/* Name */}
             <TextField
               label="Name"
               fullWidth
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
             />
+            {/* Password */}
             <TextField
               label="Password"
               type="password"
               fullWidth
-              helperText="At least 8 chars, must contain a letter & number"
               value={form.password}
               onChange={(e) => handleChange("password", e.target.value)}
+              error = {submitted && !!errors.password}
+              helperText = {submitted ? errors.password : "At least 8 chars, must contain a letter & number"}
             />
 
             {/* Avatar upload */}
@@ -154,13 +242,17 @@ export default function Register() {
             </Box>
 
             {/* Profile fields */}
+            {/* Name */}
             <TextField
               label="Display name"
               fullWidth
               required
               value={form.displayName}
               onChange={(e) => handleChange("displayName", e.target.value)}
+              error={submitted && !!errors.displayName}
+              helperText={submitted ? errors.displayName : ""}
             />
+            {/* Age */}
             <TextField
               label="Age"
               type="number"
@@ -168,7 +260,10 @@ export default function Register() {
               required
               value={form.age}
               onChange={(e) => handleChange("age", e.target.value)}
+              error={submitted && !!errors.age}
+              helperText={submitted ? errors.age : ""}
             />
+            {/* Bio */}
             <TextField
               label="Bio"
               fullWidth
@@ -210,7 +305,13 @@ export default function Register() {
               )}
             />
 
-            <Button variant="contained" fullWidth onClick={handleSubmit} disabled={!hasAvatar}>
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={handleSubmit}
+              loading={loading}
+              disabled={!hasAvatar}
+            >
               Sign up
             </Button>
           </Stack>

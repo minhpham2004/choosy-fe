@@ -1,81 +1,127 @@
 import {
   Box,
   Button,
-  Container,
-  Link,
-  styled,
-  type Theme,
+  Card,
+  CardContent,
+  Stack,
+  TextField,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
-import { ArrowForward } from "@mui/icons-material";
+import { useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
-export const CustomBackground = styled(Box)(({ theme }) => ({
-  alignItems: "center",
-  background:
-    theme.palette.mode === "dark"
-      ? `linear-gradient(45deg, #7f699b, #9232ff, #000000, #000000, #ffb800)`
-      : `linear-gradient(45deg, #7f699b, #9232ff, #000000, #000000, #ffb800)`,
-  backgroundSize: "600% 100%",
-  animation: "gradient linear 16s infinite alternate",
-  display: "flex",
-  justifyContent: "center",
-}));
-
-const LoginPage = () => {
-  const mdUp = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
-
-  return (
-    <>
-      <CustomBackground
-        sx={{
-          alignItems: "center",
-          display: "flex",
-          flexGrow: 1,
-          py: "80px",
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              mb: 6,
-            }}
-          >
-            <Box
-              alt="Not found"
-              component="img"
-              src={`/react.svg`}
-              sx={{
-                height: "auto",
-                maxWidth: "100%",
-                width: 400,
-              }}
-            />
-          </Box>
-          <Typography align="center" variant={mdUp ? "h1" : "h4"}>
-            401: Authorization required
-          </Typography>
-          <Typography align="center" color="text.secondary" sx={{ mt: 0.5 }}>
-            You've logged out or your session has expired. Please log in again.
-          </Typography>
-          <Link
-            href="/auth/login"
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              mt: 6,
-            }}
-          >
-            <Button variant="contained" endIcon={<ArrowForward />}>
-              Login Now
-            </Button>
-          </Link>
-        </Container>
-      </CustomBackground>
-    </>
-  );
+type LoginErrors = {
+  email?: string;
+  password?: string;
 };
 
-export default LoginPage;
+const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //Email Regular Expression
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<LoginErrors>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  function validate(values = { email, password }) {
+    const next: LoginErrors = {};
+    if (!values.email) next.email = "Email is required";
+    else if (!emailFormat.test(values.email)) next.email = "Enter a valid email address";
+
+    if (!values.password) next.password = "Password is required";
+    else if (values.password.length < 8) next.password = "Password must be 8 or more characters";
+
+    return next;
+  }
+
+  async function handleLogin() {
+    setSubmitted(true);
+    const next = validate();
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+
+    setLoading(true);
+    try {
+      const {data} = await axios.post("/auth/login", { email, password });
+
+      const token = data?.accessToken;
+      if (!token) throw new Error ("No token returned");
+      localStorage.setItem("accessToken", token);
+
+      toast.success("Login successful!");
+      console.log("Logged in! Token saved:", token);
+
+      setTimeout(() => { window.location.href = "/"; }, 1000);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message || err.response?.data || err.message;
+      toast.error(`Login failed: ${message}`);
+      console.error("Login failed:", message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // After the first submit, re-validate on change so errors clear when the user fixes the inputs
+
+  function onEmailChange(v: string) {
+    setEmail(v);
+    if (!submitted) return;
+    setErrors((prev) => ({ ...prev, ...validate({ email: v, password }) }));
+  }
+
+  function onPasswordChange(v: string) {
+    setPassword(v);
+    if (!submitted) return;
+    setErrors((prev) => ({ ...prev, ...validate({ email, password: v }) }));
+  }
+
+  return (
+    <Box sx={{ p: 3, display: "grid", placeItems: "center" }}>
+      <Card sx={{ width: 420, maxWidth: "90vw" }}>
+        <CardContent>
+          <Typography variant="h5" gutterBottom>
+            Login
+          </Typography>
+
+          <Stack spacing={2}>
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              value={email}
+              onChange={(e) => onEmailChange(e.target.value)}
+              error={submitted && !!errors.email}
+              helperText={submitted ? errors.email : ""}             
+            />
+
+            <TextField
+              label="Password"
+              type="password"
+              fullWidth
+              value={password}
+              onChange={(e) => onPasswordChange(e.target.value)}
+              error={submitted && !!errors.password}
+              helperText={submitted ? errors.password : ""}
+            />
+
+            <Button
+              loading={loading}
+              variant="contained"
+              fullWidth
+              onClick={handleLogin}
+            >
+              Sign in
+            </Button>
+
+            <Typography>
+              Don&apos;t have an account? <a href="/register">Register Now.</a>
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}

@@ -1,11 +1,29 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="7" failures="0" errors="0" time="0.552114333">
-    <testsuite name="src/simple.test.ts" timestamp="2025-09-30T06:44:04.661Z" hostname="DCS-HM9CVXTJ9D-rayan.eltaher" tests="1" failures="0" errors="0" skipped="0" time="0.000921542">
-        <testcase classname="src/simple.test.ts" name="basic math &gt; 1+1 = 2" time="0.000454">
+<testsuites name="vitest tests" tests="10" failures="0" errors="0" time="3.9766418">
+    <testsuite name="src/simple.test.ts" timestamp="2025-10-01T14:42:39.343Z" hostname="Rav-G15" tests="1" failures="0" errors="0" skipped="0" time="0.0025928">
+        <testcase classname="src/simple.test.ts" name="basic math &gt; 1+1 = 2" time="0.0012527">
         </testcase>
     </testsuite>
-    <testsuite name="src/pages/profile/profile.test.tsx" timestamp="2025-09-30T06:44:04.661Z" hostname="DCS-HM9CVXTJ9D-rayan.eltaher" tests="6" failures="0" errors="0" skipped="0" time="0.551192791">
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; renders form fields" time="0.162345917">
+    <testsuite name="src/pages/auth/login.test.tsx" timestamp="2025-10-01T14:42:39.344Z" hostname="Rav-G15" tests="2" failures="0" errors="0" skipped="0" time="0.7227838">
+        <testcase classname="src/pages/auth/login.test.tsx" name="Login &gt; renders email, password fields and Sign in button" time="0.1211844">
+        </testcase>
+        <testcase classname="src/pages/auth/login.test.tsx" name="Login &gt; submits when valid values are entered" time="0.6001723">
+            <system-err>
+Login failed: No token returned
+
+            </system-err>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/auth/register.test.tsx" timestamp="2025-10-01T14:42:39.345Z" hostname="Rav-G15" tests="1" failures="0" errors="0" skipped="0" time="1.8158783">
+        <testcase classname="src/pages/auth/register.test.tsx" name="Register &gt; submits when all required fields are filled" time="1.8144538">
+            <system-out>
+✅ User created: { ok: [33mtrue[39m }
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/profile/profile.test.tsx" timestamp="2025-10-01T14:42:39.346Z" hostname="Rav-G15" tests="6" failures="0" errors="0" skipped="0" time="1.4353869">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; renders form fields" time="0.4086168">
             <system-err>
 MUI: You have provided an out-of-range value `sydney` for the select component.
 Consider providing a value that matches one of the available options or &apos;&apos;.
@@ -16,15 +34,15 @@ The available values are `cbd_inner_south`, `inner_west`, `eastern_suburbs`, `lo
 
             </system-err>
         </testcase>
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; lets user edit and save profile" time="0.110078375">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; lets user edit and save profile" time="0.297332">
         </testcase>
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; shows error toast when save fails" time="0.103178459">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; shows error toast when save fails" time="0.2216038">
         </testcase>
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; prefills gender from API and sends it on save" time="0.049941958">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; prefills gender from API and sends it on save" time="0.1353948">
         </testcase>
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; sends null for gender when left blank" time="0.041810291">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; sends null for gender when left blank" time="0.1203091">
         </testcase>
-        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; allows for selecting a different gender and sends it" time="0.083146458">
+        <testcase classname="src/pages/profile/profile.test.tsx" name="Profile Component &gt; allows for selecting a different gender and sends it" time="0.250618">
         </testcase>
     </testsuite>
 </testsuites>
