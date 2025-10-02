@@ -1,5 +1,5 @@
 trigger:
-- master 
+- '*' 
 
 pool:
   vmImage: ubuntu-latest
@@ -24,6 +24,25 @@ steps:
     npm ci
     npm run build
   displayName: 'Install deps & build (Vite at repo root)'
+
+- script: |
+    npx vitest run --coverage
+  displayName: 'Run unit tests with Vitest'
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFiles: '**/junit.xml'
+    testResultsFormat: 'JUnit'
+  condition: succeededOrFailed()
+  displayName: 'Publish test results'
+
+- task: PublishCodeCoverageResults@2
+  inputs:
+    codeCoverageTool: 'Cobertura'
+    summaryFileLocation: 'coverage/cobertura-coverage.xml'
+    reportDirectory: 'coverage'
+  condition: succeededOrFailed()
+  displayName: 'Publish code coverage'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish dist as artifact'
