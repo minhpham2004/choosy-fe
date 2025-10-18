@@ -20,9 +20,9 @@ steps:
     path: '$(Pipeline.Workspace)/npm-cache'
 
 - script: |
-    echo "VITE_BACKEND_URL=https://api-choosy-gwf7hedba5cge7cw.australiaeast-01.azurewebsites.net" > .env.production
-    echo "VITE_CLOUDINARY_NAME=dtmyz4wy0" >> .env.production
-    echo "VITE_CLOUDINARY_PRESET=choosy" >> .env.production
+    echo "VITE_BACKEND_URL=$(VITE_BACKEND_URL)" > .env.production
+    echo "VITE_CLOUDINARY_NAME=$(VITE_CLOUDINARY_NAME)" >> .env.production
+    echo "VITE_CLOUDINARY_PRESET=$(VITE_CLOUDINARY_PRESET)" >> .env.production
     npm config set cache $(Pipeline.Workspace)/npm-cache --global
     npm ci
     npm run build
