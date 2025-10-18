@@ -50,3 +50,22 @@ steps:
     PathtoPublish: 'dist'
     ArtifactName: 'static'
     publishLocation: 'Container'
+
+- task: ArchiveFiles@2
+  displayName: 'Archive frontend build for deployment'
+  inputs:
+    rootFolderOrFile: 'dist'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/frontend.zip'
+    replaceExistingArchive: true
+
+- task: AzureWebApp@1
+  displayName: 'Deploy React/Vite app to Azure App Service'
+  inputs:
+    azureSubscription: 'choosy-connection'
+    appType: 'webAppLinux'
+    appName: 'choosy'
+    package: '$(Build.ArtifactStagingDirectory)/frontend.zip'
+    runtimeStack: 'NODE|18-lts'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
