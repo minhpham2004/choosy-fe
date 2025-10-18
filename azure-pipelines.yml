@@ -68,4 +68,4 @@ steps:
     appName: 'choosy'
     package: '$(Build.ArtifactStagingDirectory)/frontend.zip'
     runtimeStack: 'NODE|18-lts'
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+  # condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
