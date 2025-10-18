@@ -1,6 +1,9 @@
 trigger:
 - '*' 
 
+variables:
+- group: choosy-env-variables
+
 pool:
   vmImage: ubuntu-latest
 
@@ -20,13 +23,20 @@ steps:
     path: '$(Pipeline.Workspace)/npm-cache'
 
 - script: |
+    npm config set cache $(Pipeline.Workspace)/npm-cache --global
+  displayName: 'Configure npm cache'
+
+- script: |
     echo "VITE_BACKEND_URL=$(VITE_BACKEND_URL)" > .env.production
     echo "VITE_CLOUDINARY_NAME=$(VITE_CLOUDINARY_NAME)" >> .env.production
     echo "VITE_CLOUDINARY_PRESET=$(VITE_CLOUDINARY_PRESET)" >> .env.production
-    npm config set cache $(Pipeline.Workspace)/npm-cache --global
     npm ci
     npm run build
   displayName: 'Install deps & build (Vite at repo root)'
+  env:
+    VITE_BACKEND_URL: $(VITE_BACKEND_URL)
+    VITE_CLOUDINARY_NAME: $(VITE_CLOUDINARY_NAME)
+    VITE_CLOUDINARY_PRESET: $(VITE_CLOUDINARY_PRESET)
 
 - script: |
     npx vitest run --coverage
