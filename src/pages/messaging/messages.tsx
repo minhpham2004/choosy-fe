@@ -56,7 +56,8 @@ function normalizeMessages(payload: unknown): Message[] {
   if (payload && typeof payload === "object") {
     const anyObj = payload as Record<string, any>;
     if (Array.isArray(anyObj.messages)) return anyObj.messages as Message[];
-    if (Array.isArray(anyObj.lastMessages)) return anyObj.lastMessages as Message[];
+    if (Array.isArray(anyObj.lastMessages))
+      return anyObj.lastMessages as Message[];
   }
   return [];
 }
@@ -250,7 +251,9 @@ export default function Messages() {
               flexDirection: "column",
             }}
           >
-            <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <CardContent
+              sx={{ flex: 1, display: "flex", flexDirection: "column" }}
+            >
               <Typography variant="h6" sx={{ mb: 5 }}>
                 {selectedMatchId ? "Match Name" : "Pick a match"}
               </Typography>
