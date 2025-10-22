@@ -1,7 +1,4 @@
-//read me
-//localStorage.getItem("accessToken")
-//JSON.parse(atob(localStorage.getItem("accessToken").split(".")[1]))
-
+// src/pages/messaging/messages.tsx
 import {
   Box,
   Card,
@@ -17,12 +14,21 @@ import {
   TextField,
   IconButton,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+/* ============================================================
+   MOCK TOGGLE (no visible indicators)
+   ============================================================ */
+const USE_MOCK = true;
+
+/* ============================================================
+   Types
+   ============================================================ */
 type Match = {
   _id: string;
   userA: string;
@@ -39,29 +45,154 @@ type Message = {
   updatedAt: string;
 };
 
+/* ============================================================
+   Helpers
+   ============================================================ */
 function normalizeMatches(payload: unknown): Match[] {
-  // Accept: Match[] OR { value: Match[] } OR { matches: Match[] }
   if (Array.isArray(payload)) return payload as Match[];
   if (payload && typeof payload === "object") {
-    const anyObj = payload as Record<string, any>;
-    if (Array.isArray(anyObj.value)) return anyObj.value as Match[];
-    if (Array.isArray(anyObj.matches)) return anyObj.matches as Match[];
+    const o = payload as Record<string, any>;
+    if (Array.isArray(o.matches)) return o.matches as Match[];
+    if (Array.isArray(o.value)) return o.value as Match[];
+    if (Array.isArray(o.data)) return o.data as Match[];
+    if (Array.isArray(o.result)) return o.result as Match[];
   }
   return [];
 }
 
 function normalizeMessages(payload: unknown): Message[] {
-  // Accept: Message[] OR { ok, messages } OR { ok, lastMessages }
   if (Array.isArray(payload)) return payload as Message[];
   if (payload && typeof payload === "object") {
-    const anyObj = payload as Record<string, any>;
-    if (Array.isArray(anyObj.messages)) return anyObj.messages as Message[];
-    if (Array.isArray(anyObj.lastMessages))
-      return anyObj.lastMessages as Message[];
+    const o = payload as Record<string, any>;
+    if (Array.isArray(o.messages)) return o.messages as Message[];
+    if (Array.isArray(o.lastMessages)) return o.lastMessages as Message[];
+    if (Array.isArray(o.data)) return o.data as Message[];
+    if (Array.isArray(o.result)) return o.result as Message[];
   }
   return [];
 }
 
+function decodeJwt(token: string): any | null {
+  try {
+    const payloadB64 = token.split(".")[1];
+    const b64 = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(b64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+const getToken = () => localStorage.getItem("accessToken") || "";
+
+const authHeader = () => {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
+// resolve base each call (avoids memo timing)
+const apiUrl = (path: string) => {
+  const base =
+    (axios.defaults as any)?.baseURL ||
+    (import.meta as any)?.env?.VITE_BACKEND_URL ||
+    "";
+  const clean = base ? base.replace(/\/$/, "") : "";
+  return clean ? `${clean}${path}` : path;
+};
+
+// quick objectId-like generator for mock messages
+function newObjectId() {
+  const ts = Math.floor(Date.now() / 1000).toString(16);
+  const rnd = Array.from({ length: 16 }, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  ).join("");
+  return (ts + rnd).slice(0, 24);
+}
+
+/* ============================================================
+   MOCK DATA (Harry ↔ Elise) — perspective auto from JWT email
+   ============================================================ */
+
+const HARRY_ID = "68dd54137b0430ce890ed2b5";
+const ELISE_EMAIL = "elise9@example.com";
+const ELISE_ID = "68dd54137b0430ce890ed2b6";
+const MATCH_ID = "66aa11bb22cc33dd44ee55ff";
+
+// in-memory store so “send” feels real
+const MockDB = {
+  matches: [
+    {
+      _id: MATCH_ID,
+      userA: HARRY_ID,
+      userB: ELISE_ID,
+      lastMessageAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(), // 2 mins ago
+    },
+  ] as Match[],
+  messages: [
+    {
+      _id: newObjectId(),
+      matchId: MATCH_ID,
+      senderId: HARRY_ID,
+      body: "Hey Elise",
+      createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
+    },
+    {
+      _id: newObjectId(),
+      matchId: MATCH_ID,
+      senderId: ELISE_ID,
+      body: "Hi Harry! All good here.",
+      createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+    },
+  ] as Message[],
+};
+
+const MockApi = {
+  async getMatches(): Promise<Match[]> {
+    await new Promise((r) => setTimeout(r, 180));
+    return [...MockDB.matches].sort(
+      (a, b) =>
+        new Date(b.lastMessageAt || 0).getTime() -
+        new Date(a.lastMessageAt || 0).getTime()
+    );
+  },
+  async getMessages(matchId: string, limit = 50): Promise<Message[]> {
+    await new Promise((r) => setTimeout(r, 140));
+    return MockDB.messages
+      .filter((m) => m.matchId === matchId)
+      .sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      )
+      .slice(-limit);
+  },
+  async sendMessage(matchId: string, senderId: string, body: string) {
+    await new Promise((r) => setTimeout(r, 120));
+    const now = new Date().toISOString();
+    const msg: Message = {
+      _id: newObjectId(),
+      matchId,
+      senderId,
+      body,
+      createdAt: now,
+      updatedAt: now,
+    };
+    MockDB.messages.push(msg);
+    const match = MockDB.matches.find((m) => m._id === matchId);
+    if (match) match.lastMessageAt = now;
+    return { ok: true, message: msg };
+  },
+};
+
+/* ============================================================
+   Component
+   ============================================================ */
 export default function Messages() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
@@ -72,46 +203,81 @@ export default function Messages() {
   const [msgInput, setMsgInput] = useState("");
   const pollRef = useRef<number | null>(null);
 
-  // Pull the logged-in user id from localStorage (be flexible on key shape)
+  // Figure out who's logged in:
+  // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
+  // - REAL: derive from localStorage.user or JWT claims.
+  const token = getToken();
   const meId = useMemo(() => {
+    if (USE_MOCK) {
+      const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
+      if (email === ELISE_EMAIL) return ELISE_ID;
+      return HARRY_ID; // default to Harry
+    }
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
         const parsed = JSON.parse(rawUser);
-        return parsed?._id ?? parsed?.userId ?? null;
+        const id = parsed?._id ?? parsed?.userId ?? null;
+        if (id) return String(id);
       }
-      const rawLogin = localStorage.getItem("login");
-      if (rawLogin) {
-        const parsed = JSON.parse(rawLogin);
-        return parsed?.user?._id ?? parsed?.userId ?? null;
+      if (token) {
+        const jwt = decodeJwt(token);
+        const id = jwt?._id ?? jwt?.userId ?? jwt?.sub ?? jwt?.id ?? null;
+        if (id) return String(id);
       }
       return null;
     } catch {
       return null;
     }
-  }, []);
+  }, [token]);
 
-  // Load matches on mount
+  // In real mode, block if not logged in. In mock, always allow.
+  if (!USE_MOCK && !token) {
+    return (
+      <Box sx={{ p: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Messages
+        </Typography>
+        <Typography sx={{ mb: 2 }}>
+          You need to be signed in to view your matches and messages.
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={() => (window.location.href = "/login")}
+        >
+          Go to Login
+        </Button>
+      </Box>
+    );
+  }
+
+  // Load matches
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoadingMatches(true);
-
-        // IMPORTANT: relies on axios.defaults.baseURL set by your interceptor setup
-        const { data } = await axios.get("/match/matches");
-        const list = normalizeMatches(data);
-
+        let list: Match[] = [];
+        if (USE_MOCK) {
+          list = await MockApi.getMatches();
+        } else {
+          const { data } = await axios.get(apiUrl("/match/matches"), {
+            headers: authHeader(),
+          });
+          list = normalizeMatches(data);
+        }
         if (!mounted) return;
         setMatches(list);
-
-        // auto-select first match if none selected
         if (!selectedMatchId && list.length > 0) {
           setSelectedMatchId(list[0]._id);
         }
       } catch (err: any) {
         console.error("Failed to load matches:", err);
-        toast.error(err?.response?.data?.message ?? "Failed to load matches");
+        const msg =
+          err?.response?.data?.message ??
+          err?.response?.data ??
+          "Failed to load matches";
+        toast.error(msg);
       } finally {
         if (mounted) setLoadingMatches(false);
       }
@@ -122,29 +288,37 @@ export default function Messages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load & poll messages for selected match
+  // Load & poll messages
   useEffect(() => {
     async function load() {
       if (!selectedMatchId) return;
       try {
         setLoadingMsgs(true);
-        const { data } = await axios.get(`/chat/${selectedMatchId}`, {
-          params: { limit: 50 },
-        });
-        const list = normalizeMessages(data);
+        let list: Message[] = [];
+        if (USE_MOCK) {
+          list = await MockApi.getMessages(selectedMatchId, 50);
+        } else {
+          const { data } = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
+            params: { limit: 50 },
+            headers: authHeader(),
+          });
+          list = normalizeMessages(data);
+        }
         setMsgs(list);
       } catch (err: any) {
         console.error("Failed to load messages:", err);
-        toast.error(err?.response?.data?.message ?? "Failed to load messages");
+        const msg =
+          err?.response?.data?.message ??
+          err?.response?.data ??
+          "Failed to load messages";
+        toast.error(msg);
       } finally {
         setLoadingMsgs(false);
       }
     }
 
-    // initial load
     load();
 
-    // polling
     if (pollRef.current) window.clearInterval(pollRef.current);
     if (selectedMatchId) {
       pollRef.current = window.setInterval(load, 3_000);
@@ -155,35 +329,45 @@ export default function Messages() {
     };
   }, [selectedMatchId]);
 
-  // Send message
+  // Send (mock just appends; real would POST)
   async function sendMessage() {
-    if (!selectedMatchId) return;
+    if (!selectedMatchId || !meId) return;
     const body = msgInput.trim();
     if (!body) return;
 
     try {
-      const { data } = await axios.post<{ ok: boolean; message?: Message }>(
-        `/chat/${selectedMatchId}`,
-        { body }
-      );
-      if (data?.ok && data?.message) {
-        setMsgs((m) => [...m, data.message!]);
-        setMsgInput("");
+      if (USE_MOCK) {
+        const res = await MockApi.sendMessage(selectedMatchId, meId, body);
+        if (res.ok && res.message) {
+          setMsgs((m) => [...m, res.message!]);
+          setMsgInput("");
+          return;
+        }
       } else {
-        // if the API echoes a different shape, refetch thread
-        const { data: reload } = await axios.get(`/chat/${selectedMatchId}`, {
+        const { data } = await axios.post<{ ok: boolean; message?: Message }>(
+          apiUrl(`/chat/${selectedMatchId}`),
+          { body },
+          { headers: authHeader() }
+        );
+        if (data?.ok && data?.message) {
+          setMsgs((m) => [...m, data.message!]);
+          setMsgInput("");
+          return;
+        }
+        // fallback: refetch
+        const { data: reload } = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
           params: { limit: 50 },
+          headers: authHeader(),
         });
         setMsgs(normalizeMessages(reload));
         setMsgInput("");
       }
     } catch (err: any) {
       console.error("Send failed:", err);
-      toast.error(err?.response?.data?.message ?? "Failed to send");
+      toast.error(err?.response?.data?.message ?? err?.response?.data ?? "Failed to send");
     }
   }
 
-  // Tiny helpers for UI
   const otherUserIdOf = (m: Match) => {
     if (!meId) return null;
     return String(m.userA) === String(meId) ? String(m.userB) : String(m.userA);
@@ -208,7 +392,7 @@ export default function Messages() {
                 <CircularProgress size={22} />
               ) : matches.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  This is where you'll find your matches.
+                  No matches found for your account yet.
                 </Typography>
               ) : (
                 <List dense>
@@ -255,7 +439,7 @@ export default function Messages() {
               sx={{ flex: 1, display: "flex", flexDirection: "column" }}
             >
               <Typography variant="h6" sx={{ mb: 5 }}>
-                {selectedMatchId ? "Match Name" : "Pick a match"}
+                {selectedMatchId ? "Match Thread" : "Pick a match"}
               </Typography>
 
               {/* Messages */}
@@ -292,7 +476,7 @@ export default function Messages() {
                   })}
                 {!loadingMsgs && msgs.length === 0 && selectedMatchId && (
                   <Typography variant="body2" color="text.secondary">
-                    This is where your messaging will be…
+                    No messages in this thread yet.
                   </Typography>
                 )}
               </Box>
