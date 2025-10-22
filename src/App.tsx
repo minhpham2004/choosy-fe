@@ -13,6 +13,9 @@ import Likes from "./pages/likes/likes.tsx";
 import { useEffect } from "react";
 import { setupAxiosInterceptors } from "./axios-interceptor.ts";
 import { Toaster } from "react-hot-toast";
+import AccountSettings from "./pages/settings/accountSettings.tsx";
+import SettingsShell from "./pages/settings/settingsShell.tsx";
+import { Navigate } from "react-router-dom";
 
 function App() {
   useEffect(() => {
@@ -24,15 +27,30 @@ function App() {
       <div className="navbar">
         <Navbar />
       </div>
+
       <Routes>
+        {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
+
+        {/* Main */}
+        
         <Route path="/admin" element={<Admin />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/matching" element={<Matching />} />
         <Route path="/likes" element={<Likes />} />
         <Route path="/messages" element={<Messages />} />
+
+        {/* Profile & Account Settings */}
+        <Route path="/settings" element={<SettingsShell />}>
+          {/* Open profile first */}
+          <Route index element={<Navigate to="profile" replace/>} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="account" element={<AccountSettings />} />
+        </Route>
+
+        {/* Optional 404 Route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <Toaster position="top-right" />
