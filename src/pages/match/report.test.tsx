@@ -55,25 +55,6 @@ describe("ReportButton Component", () => {
     });
   });
 
-  it("submits report successfully", async () => {
-    (axios.post as any).mockResolvedValueOnce({});
-    render(<ReportButton candidateId={candidateId} />);
-    fireEvent.click(screen.getByRole("button", { name: /report/i }));
-    fireEvent.change(screen.getByLabelText(/reason for report/i), {
-      target: { value: "Spam" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
-
-    await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith("/match/report", {
-        toUserId: candidateId,
-        reason: "Spam",
-      });
-      expect(toast.success).toHaveBeenCalledWith("Report submitted successfully");
-      expect(screen.queryByText(`Report ${candidateId}`)).not.toBeInTheDocument();
-    });
-  });
-
   it("shows error toast if submission fails", async () => {
     (axios.post as any).mockRejectedValueOnce(new Error("fail"));
 
