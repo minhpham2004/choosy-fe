@@ -104,18 +104,24 @@ export default function Matching() {
   };
 
   const blockUser = async () => {
-    if (!candidate) return;
-    try {
-      await axios.post("/match/block", { toUserId: candidate.userId });
-      toast.success(`${candidate.displayName} has been blocked`);
-    } catch (err) {
+  if (!candidate) return;
+  try {
+    await axios.post("/block", { blockedId: candidate.userId });
+    toast.success(`${candidate.displayName} has been blocked`);
+  } catch (err: any) {
+    if (err.response?.status === 409) {
+      toast.error(`${candidate.displayName} is already blocked`);
+    } else if (err.response?.status === 400) {
+      toast.error("Invalid user ID");
+    } else {
       toast.error("Failed to block user");
-    } finally {
-      fetchCandidate();
-      fetchLikes();
-      handleMenuClose();
     }
-  };
+  } finally {
+    fetchCandidate();
+    fetchLikes();
+    handleMenuClose();
+  }
+};
 
   return (
     <Box
@@ -128,7 +134,6 @@ export default function Matching() {
       }}
     >
       <Container maxWidth="sm" sx={{ mb: 6, mt: 6 }}>
-        {/* Header */}
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -152,7 +157,6 @@ export default function Matching() {
           </Badge>
         </Stack>
 
-        {/* Candidate Card */}
         {candidate ? (
           <motion.div
             key={candidate.userId}
@@ -181,7 +185,6 @@ export default function Matching() {
                 }}
               />
 
-              {/* Gradient + Text Overlay */}
               <Box
                 sx={{
                   position: "absolute",
@@ -244,7 +247,6 @@ export default function Matching() {
               </Box>
             </Card>
 
-            {/* Action Buttons */}
             <Stack
               direction="row"
               justifyContent="center"

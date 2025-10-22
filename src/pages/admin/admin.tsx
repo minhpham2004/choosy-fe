@@ -10,60 +10,201 @@ import {
   List,
   ListItem,
   ListItemText,
+  IconButton,
+  Menu,
+  MenuItem,
 } from "@mui/material";
-import { useState } from "react";
+import { MoreVert } from "@mui/icons-material";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 type User = {
-  id: string;
-  name: string;
-  status: "active" | "banned" | "suspended";
+  _id: string;
+  displayName: string;
+  status: "active" | "banned";
 };
 
-const demoUsers: User[] = [
-  { id: "1", name: "Alice Johnson", status: "active" },
-  { id: "2", name: "Bob Smith", status: "suspended" },
-  { id: "3", name: "Charlie Brown", status: "banned" },
-];
-
 type Report = {
-  id: string;
+  _id: string;
   fromUser: string;
   againstUser: string;
   reason: string;
 };
 
-const demoReports: Report[] = [
-  {
-    id: "r1",
-    fromUser: "User123",
-    againstUser: "Alice Johnson",
-    reason: "Spam messages",
-  },
-  {
-    id: "r2",
-    fromUser: "User456",
-    againstUser: "Bob Smith",
-    reason: "Harassment",
-  },
-];
+const ADMIN_PASSWORD = "admin123";
 
 export default function AdminDashboard() {
+  const [unlocked, setUnlocked] = useState(
+    localStorage.getItem("adminUnlocked") === "true"
+  );
+  const [enteredPassword, setEnteredPassword] = useState("");
+
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<User | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
-  const handleSearch = () => {
-    const found = demoUsers.find(
-      (u) =>
-        u.name.toLowerCase().includes(query.toLowerCase()) ||
-        u.id === query.trim()
-    );
-    setResult(found || null);
+  const menuOpen = Boolean(anchorEl);
+
+  useEffect(() => {
+    if (unlocked) fetchReports();
+  }, [unlocked]);
+
+  const fetchReports = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await axios.get("/report/all", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      const data = Array.isArray(res.data) ? res.data : res.data?.reports || [];
+
+      const formatted = data.map((r: any) => ({
+        _id: r._id,
+        fromUser: r.reporterName || "Unknown",
+        againstUser: r.reportedName || "Unknown",
+        reason: r.reason || "No reason provided",
+      }));
+
+      setReports(formatted);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateStatus = (status: User["status"]) => {
+  const handlePasswordSubmit = () => {
+    if (enteredPassword === ADMIN_PASSWORD) {
+      toast.success("Admin access granted");
+      setUnlocked(true);
+      localStorage.setItem("adminUnlocked", "true");
+    } else {
+      toast.error("Incorrect password");
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await axios.get(
+        `/user/search?query=${encodeURIComponent(query)}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
+      );
+
+      const user = Array.isArray(res.data)
+        ? res.data[0]
+        : res.data
+        ? res.data
+        : null;
+
+      if (!user) {
+        toast.error("No user found");
+        setResult(null);
+        return;
+      }
+
+      setResult({
+        _id: user._id,
+        displayName: user.displayName || "Unnamed",
+        status: user.status || "active",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Search failed");
+      setResult(null);
+    }
+  };
+
+  const updateStatus = async (status: User["status"]) => {
     if (!result) return;
-    setResult({ ...result, status });
+    try {
+      const token = localStorage.getItem("authToken");
+      await axios.post(
+        `/user/${status === "banned" ? "ban" : "unban"}/${result._id}`,
+        {},
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        }
+      );
+      toast.success(`${result.displayName} is now ${status}`);
+      setResult({ ...result, status });
+    } catch {
+      toast.error("Failed to update status");
+    }
   };
+
+  const handleMenuOpen = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    reportId: string
+  ) => {
+    setSelectedReportId(reportId);
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedReportId(null);
+  };
+
+  const handleResolve = async () => {
+    if (!selectedReportId) return;
+    try {
+      const token = localStorage.getItem("authToken");
+      await axios.delete(`/report/${selectedReportId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      toast.success("Report resolved");
+      setReports((prev) => prev.filter((r) => r._id !== selectedReportId));
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to resolve report");
+    } finally {
+      handleMenuClose();
+    }
+  };
+
+  if (!unlocked) {
+    return (
+      <Box
+        sx={{
+          p: 3,
+          display: "grid",
+          placeItems: "center",
+          height: "100vh",
+          bgcolor: "background.default",
+        }}
+      >
+        <Card sx={{ width: 380, maxWidth: "90vw" }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Enter Admin Password
+            </Typography>
+            <Stack spacing={2}>
+              <TextField
+                label="Admin Password"
+                type="password"
+                fullWidth
+                value={enteredPassword}
+                onChange={(e) => setEnteredPassword(e.target.value)}
+              />
+              <Button variant="contained" onClick={handlePasswordSubmit}>
+                Unlock Dashboard
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3, display: "grid", placeItems: "center" }}>
@@ -76,8 +217,8 @@ export default function AdminDashboard() {
           <Stack spacing={2} mb={3}>
             <Stack direction="row" spacing={1}>
               <TextField
-                label="Search Users"
                 fullWidth
+                label="Search Users"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -86,10 +227,10 @@ export default function AdminDashboard() {
               </Button>
             </Stack>
 
-            {result ? (
+            {result && (
               <Card sx={{ p: 2, bgcolor: "grey.100" }}>
                 <Typography variant="subtitle1">
-                  {result.name} (ID: {result.id})
+                  {result.displayName} (ID: {result._id})
                 </Typography>
                 <Typography
                   variant="body2"
@@ -98,14 +239,11 @@ export default function AdminDashboard() {
                     color:
                       result.status === "active"
                         ? "success.main"
-                        : result.status === "banned"
-                        ? "error.main"
-                        : "warning.main",
+                        : "error.main",
                   }}
                 >
                   Status: {result.status}
                 </Typography>
-
                 <Stack direction="row" spacing={1}>
                   <Button
                     variant="outlined"
@@ -123,9 +261,9 @@ export default function AdminDashboard() {
                   </Button>
                 </Stack>
               </Card>
-            ) : (
-              query && <Typography>No user found</Typography>
             )}
+
+            {!result && query && <Typography>No user found</Typography>}
           </Stack>
 
           <Divider sx={{ my: 2 }} />
@@ -133,29 +271,48 @@ export default function AdminDashboard() {
           <Typography variant="h6" gutterBottom>
             Report Logs
           </Typography>
-          <List dense>
-            {demoReports.map((r) => (
-              <ListItem
-                key={r.id}
-                sx={{
-                  borderBottom: "1px solid #eee",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                }}
-              >
-                <ListItemText
-                  primary={`From: ${r.fromUser} → Against: ${r.againstUser}`}
-                  secondary={`Reason: ${r.reason}`}
-                />
-              </ListItem>
-            ))}
-          </List>
+          {loading ? (
+            <Typography>Loading reports...</Typography>
+          ) : (
+            <List dense>
+              {reports.map((r) => (
+                <ListItem
+                  key={r._id}
+                  sx={{
+                    borderBottom: "1px solid #eee",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <ListItemText
+                    primary={`From: ${r.fromUser} → Against: ${r.againstUser}`}
+                    secondary={`Reason: ${r.reason}`}
+                  />
+                  <IconButton onClick={(e) => handleMenuOpen(e, r._id)}>
+                    <MoreVert />
+                  </IconButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+
+          <Menu anchorEl={anchorEl} open={menuOpen} onClose={handleMenuClose}>
+            <MenuItem onClick={handleResolve}>Resolve Report</MenuItem>
+          </Menu>
 
           <Divider sx={{ my: 2 }} />
-
-          <Button variant="text" color="error" fullWidth>
-            Logout
+          <Button
+            variant="text"
+            color="error"
+            fullWidth
+            onClick={() => {
+              localStorage.removeItem("adminUnlocked");
+              setUnlocked(false);
+              toast("Admin locked");
+            }}
+          >
+            Lock Admin Panel
           </Button>
         </CardContent>
       </Card>
