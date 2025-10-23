@@ -54,7 +54,7 @@ export default function Likes() {
       } else {
         toast("Skipped");
       }
-      // Remove from local list
+
       setLikes((prev) => prev.filter((p) => p.userId !== toUserId));
     } catch (err) {
       toast.error("Action failed");
@@ -179,7 +179,6 @@ export default function Likes() {
                   </Box>
                 </Card>
 
-                {/* Action Buttons */}
                 <Stack
                   direction="row"
                   justifyContent="center"
