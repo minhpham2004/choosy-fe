@@ -3,9 +3,14 @@ import {
   DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import { useEffect, useState } from "react";
-// import axios from "axios";
+import axios from "axios";
 import toast from "react-hot-toast";
-import { api } from "../../lib/api";
+
+// Small helper so every call includes the bearer token
+function auth() {
+  const token = localStorage.getItem("accessToken");
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+}
 
 export default function AccountSettings() {
   return (
@@ -27,7 +32,7 @@ function EmailSection() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/user/me");
+        const { data } = await axios.get("/user/me", auth());
         setEmail(data.email || "");
       } catch {
         // ignore
@@ -39,7 +44,7 @@ function EmailSection() {
     if (!newEmail) return toast.error("Enter a new email.");
     setLoading(true);
     try {
-      const { data } = await api.patch("/user/me", { email: newEmail });
+      const { data } = await axios.patch("/user/me", { email: newEmail }, auth());
       setEmail(data.email);
       setNewEmail("");
       toast.success("Email updated.");
@@ -64,7 +69,6 @@ function EmailSection() {
   );
 }
 
-
 // --- Password
 function PasswordSection() {
   const [current, setCurrent] = useState("");
@@ -75,7 +79,7 @@ function PasswordSection() {
     if (!current || !next) return toast.error("Enter current and new password.");
     if (next !== confirm) return toast.error("Passwords do not match.");
     try {
-      await api.post("/auth/change-password", { currentPassword: current, newPassword: next });
+      await axios.post("/auth/change-password", { currentPassword: current, newPassword: next }, auth());
       toast.success("Password changed.");
       setCurrent(""); setNext(""); setConfirm("");
     } catch (e: any) {
@@ -100,8 +104,7 @@ function PasswordSection() {
   );
 }
 
-
-// !!! Danger Zone - Account Deletion
+// !!! Danger Zone (password-only confirmation + reauth)
 function DangerZone() {
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -109,15 +112,12 @@ function DangerZone() {
 
   async function deleteAccount() {
     if (!password) return toast.error("Please enter your password to confirm.");
-
     setLoading(true);
     try {
-      // 1) Re-authenticate with password
-      await api.post("/auth/reauth", { password });
-
-      // 2) Delete the user account
-      await api.delete("/user/me");
-
+      // 1) Re-authenticate
+      await axios.post("/auth/reauth", { password }, auth());
+      // 2) Delete account
+      await axios.delete("/user/me", auth());
       // 3) Cleanup + redirect
       localStorage.removeItem("accessToken");
       toast.success("Account deleted");
@@ -132,38 +132,21 @@ function DangerZone() {
   return (
     <Card variant="outlined" sx={{ borderColor: "error.main" }}>
       <CardContent>
-        <Typography variant="h6" color="error" gutterBottom>
-          Danger Zone
-        </Typography>
-
+        <Typography variant="h6" color="error" gutterBottom>Danger Zone</Typography>
         <Typography color="text.secondary" gutterBottom>
           Permanently delete your account and all associated data.
         </Typography>
+        <Button color="error" variant="contained" onClick={() => setOpen(true)}>Delete account</Button>
 
-        <Button
-          color="error"
-          variant="contained"
-          onClick={() => setOpen(true)}
-        >
-          Delete account
-        </Button>
-
-        <Dialog
-          open={open}
-          onClose={() => setOpen(false)}
-          fullWidth
-          maxWidth="sm"
-        >
+        <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle>Confirm account deletion</DialogTitle>
           <DialogContent>
             <Alert severity="error" sx={{ mb: 2 }}>
               This action is <b>permanent</b> and cannot be undone.
             </Alert>
-
             <Typography sx={{ mb: 2 }}>
               To confirm, please enter your password below. This ensures that only you can delete your account.
             </Typography>
-
             <TextField
               label="Password"
               type="password"
@@ -172,15 +155,9 @@ function DangerZone() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </DialogContent>
-
           <DialogActions>
             <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button
-              color="error"
-              variant="contained"
-              disabled={loading || !password}
-              onClick={deleteAccount}
-            >
+            <Button color="error" variant="contained" disabled={loading || !password} onClick={deleteAccount}>
               {loading ? "Deleting..." : "Delete account"}
             </Button>
           </DialogActions>
@@ -189,4 +166,3 @@ function DangerZone() {
     </Card>
   );
 }
-
