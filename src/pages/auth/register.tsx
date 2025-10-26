@@ -103,7 +103,9 @@ export default function Register() {
           <Typography variant="h5" gutterBottom>
             Create account
           </Typography>
+
           <Stack spacing={2}>
+            {/* Email */}
             <TextField
               label="Email"
               type="email"
@@ -111,20 +113,25 @@ export default function Register() {
               required
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
+              error={submitted && !!errors.email}
+              helperText={submitted ? errors.email : ""}
             />
+            {/* Name */}
             <TextField
               label="Name"
               fullWidth
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
             />
+            {/* Password */}
             <TextField
               label="Password"
               type="password"
               fullWidth
-              helperText="At least 8 chars, must contain a letter & number"
               value={form.password}
               onChange={(e) => handleChange("password", e.target.value)}
+              error = {submitted && !!errors.password}
+              helperText = {submitted ? errors.password : "At least 8 chars, must contain a letter & number"}
             />
 
             {/* Avatar upload */}
@@ -154,13 +161,17 @@ export default function Register() {
             </Box>
 
             {/* Profile fields */}
+            {/* Name */}
             <TextField
               label="Display name"
               fullWidth
               required
               value={form.displayName}
               onChange={(e) => handleChange("displayName", e.target.value)}
+              error={submitted && !!errors.displayName}
+              helperText={submitted ? errors.displayName : ""}
             />
+            {/* Age */}
             <TextField
               label="Age"
               type="number"
@@ -168,7 +179,10 @@ export default function Register() {
               required
               value={form.age}
               onChange={(e) => handleChange("age", e.target.value)}
+              error={submitted && !!errors.age}
+              helperText={submitted ? errors.age : ""}
             />
+            {/* Bio */}
             <TextField
               label="Bio"
               fullWidth

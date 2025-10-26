@@ -55,31 +55,100 @@ export default function Navbar() {
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button color="inherit" component={RouterLink} to="/">
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            "& .nav-btn": {
+              position: "relative",
+              fontWeight: 500,
+              letterSpacing: 0.3,
+              textTransform: "none",
+              transition: "all 0.25s ease",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                bottom: 2,
+                left: 0,
+                width: 0,
+                height: 2,
+                bgcolor: "primary.main",
+                borderRadius: 2,
+                transition: "width 0.3s ease",
+              },
+              "&:hover": {
+                transform: "translateY(-1px)",
+                color: "black",
+                textDecoration: "none",
+                "&::after": {
+                  width: "100%",
+                },
+              },
+            },
+          }}
+        >
+          <Button
+            className="nav-btn"
+            color="inherit"
+            component={RouterLink}
+            to="/"
+          >
             Dashboard
           </Button>
-          <Button color="inherit" component={RouterLink} to="/matching">
+          <Button
+            className="nav-btn"
+            color="inherit"
+            component={RouterLink}
+            to="/matching"
+          >
             Matching
           </Button>
-          <Button color="inherit" component={RouterLink} to="/profile">
-            Profile
+          <Button
+            className="nav-btn"
+            color="inherit"
+            component={RouterLink}
+            to="/settings/profile"
+          >
+            Settings
           </Button>
-          <Button color="inherit" component={RouterLink} to="/messages">
+          <Button
+            className="nav-btn"
+            color="inherit"
+            component={RouterLink}
+            to="/messages"
+          >
             Messages
           </Button>
 
           {!isLoggedIn ? (
             <>
-              <Button color="inherit" component={RouterLink} to="/login">
+              <Button
+                className="nav-btn"
+                color="inherit"
+                component={RouterLink}
+                to="/login"
+              >
                 Login
               </Button>
-              <Button color="inherit" component={RouterLink} to="/register">
+              <Button
+                className="nav-btn"
+                color="inherit"
+                component={RouterLink}
+                to="/register"
+                sx={{
+                  borderRadius: 2,
+                  borderWidth: 1.5,
+                  "&:hover": {
+                    borderWidth: 2,
+                    transform: "translateY(-1px)",
+                  },
+                }}
+              >
                 Register
               </Button>
             </>
           ) : (
-            <Button color="inherit" onClick={handleLogout}>
+            <Button className="nav-btn" color="inherit" onClick={handleLogout}>
               Logout
             </Button>
           )}
