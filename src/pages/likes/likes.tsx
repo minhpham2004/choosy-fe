@@ -15,6 +15,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
+// Profile type for users who liked the current user
 type Profile = {
   userId: string;
   displayName: string;
@@ -26,9 +27,10 @@ type Profile = {
 };
 
 export default function Likes() {
-  const [likes, setLikes] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [likes, setLikes] = useState<Profile[]>([]); // List of people who liked you
+  const [loading, setLoading] = useState(false); // Loading state
 
+  // Fetch list of likes from the server
   const fetchLikes = async () => {
     try {
       setLoading(true);
@@ -41,10 +43,12 @@ export default function Likes() {
     }
   };
 
+  // Fetch likes on first render
   useEffect(() => {
     fetchLikes();
   }, []);
 
+  // Handle like-back or skip actions
   const swipeBack = async (toUserId: string, action: "like" | "dislike") => {
     try {
       const res = await axios.post("/match/swipe", { toUserId, action });
@@ -56,6 +60,7 @@ export default function Likes() {
         toast("Skipped");
       }
 
+      // Remove that user from the list
       setLikes((prev) => prev.filter((p) => p.userId !== toUserId));
     } catch (err) {
       toast.error("Action failed");
@@ -81,15 +86,18 @@ export default function Likes() {
           People Who Liked You
         </Typography>
 
+        {/* Loading spinner */}
         {loading ? (
           <Stack alignItems="center" sx={{ mt: 6 }}>
             <CircularProgress />
           </Stack>
         ) : likes.length === 0 ? (
+          // Empty state
           <Typography align="center" color="text.secondary">
             Nobody yet… check back later 👀
           </Typography>
         ) : (
+          // List of profiles
           <Stack spacing={5}>
             {likes.map((profile) => (
               <motion.div
@@ -98,6 +106,7 @@ export default function Likes() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
+                {/* Profile card */}
                 <Card
                   sx={{
                     position: "relative",
@@ -119,6 +128,7 @@ export default function Likes() {
                     }}
                   />
 
+                  {/* Overlay info section */}
                   <Box
                     sx={{
                       position: "absolute",
@@ -137,6 +147,7 @@ export default function Likes() {
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       {profile.displayName}, {profile.age}
                     </Typography>
+
                     {profile.areaKey && (
                       <Typography variant="body2" sx={{ opacity: 0.85 }}>
                         {profile.areaKey}
@@ -159,6 +170,7 @@ export default function Likes() {
                       </Typography>
                     )}
 
+                    {/* Interest tags */}
                     <Stack
                       direction="row"
                       spacing={0.8}
@@ -180,6 +192,7 @@ export default function Likes() {
                   </Box>
                 </Card>
 
+                {/* Action buttons */}
                 <Stack
                   direction="row"
                   justifyContent="center"
