@@ -10,6 +10,7 @@ export default function SettingsSidebar() {
         <Stack mt={1} gap={1}>
           <NavItem to="/settings/profile" label="Profile" />
           <NavItem to="/settings/account" label="Account & Security" />
+          <NavItem to="/settings/sessions" label="Sessions" /> {/* Placeholder stub for UI feature */}
         </Stack>
       </CardContent>
     </Card>

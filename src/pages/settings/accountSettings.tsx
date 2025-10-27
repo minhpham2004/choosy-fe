@@ -13,6 +13,7 @@ export default function AccountSettings() {
     <Stack flex={1} gap={3}>
       <EmailSection />
       <PasswordSection />
+      <DataExportSection /> {/* Work in progress */}
       <DangerZone />
     </Stack>
   );
@@ -31,7 +32,7 @@ function EmailSection() {
         const { data } = await api.get("/user/me");
         setEmail(data.email || "");
       } catch {
-        // ignore
+        // ignore prefill errors
       }
     })();
   }, []);
@@ -101,6 +102,44 @@ function PasswordSection() {
   );
 }
 
+
+// --- Download My Data (Work in progress / Purely frontend UI)
+function DataExportSection() {
+  const [loading, setLoading] = useState(false);
+
+  function triggerWipToast() {
+    setLoading(true);
+    toast(`Data export (ZIP) is a work in progress.`);
+  }
+
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" gutterBottom textAlign="center">
+          Download your data
+        </Typography>
+
+        <Alert severity="info" sx={{ mb: 2 }}>
+          This feature is under construction. You will be able to use it soon.
+        </Alert>
+
+        <Typography color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+          Export all your account data as a ZIP file.
+        </Typography>
+
+        <Stack alignItems="center">
+          <Button
+            variant="contained"
+            disabled={loading}
+            onClick={triggerWipToast}
+          >
+            Download Data (.zip)
+          </Button>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
 
 // !!! Danger Zone - Account Deletion
 function DangerZone() {
