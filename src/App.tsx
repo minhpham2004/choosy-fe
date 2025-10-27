@@ -16,6 +16,7 @@ import { Toaster } from "react-hot-toast";
 import AccountSettings from "./pages/settings/accountSettings.tsx";
 import SettingsShell from "./pages/settings/settingsShell.tsx";
 import { Navigate } from "react-router-dom";
+import SessionsSettings from "./pages/settings/sessionsSettings.tsx";
 
 function App() {
   useEffect(() => {
@@ -47,6 +48,7 @@ function App() {
           <Route index element={<Navigate to="profile" replace/>} />
             <Route path="profile" element={<Profile />} />
             <Route path="account" element={<AccountSettings />} />
+            <Route path="sessions" element={<SessionsSettings />} />
         </Route>
 
         {/* Optional 404 Route */}
