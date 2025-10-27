@@ -38,7 +38,7 @@ Team Member	Responsibilities
 
 Frameworks and Libraries
 - Frontend Framework: React (with Vite + TypeScript)
-- UI Library: Material UI / Tailwind CSS
+- UI Library: Material UI
 - Routing: React Router DOM
 - Testing: Vitest
 - Build Tool: Vite
@@ -74,6 +74,5 @@ npm run test
 
 Notes for Tutor
 - This is the frontend interface for the Choosy project.
-- The application depends on the Choosy Backend API for authentication, matching, chat, and reporting functionality.
-- Ensure the backend is running locally before starting the frontend to avoid CORS or connection errors.
+- Ensure the backend is running locally before starting the frontend.
 - The project uses only local environment variables.
