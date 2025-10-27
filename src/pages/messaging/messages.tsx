@@ -1,4 +1,6 @@
+// src/pages/messaging/messages.tsx
 // Harry Solterbeck
+
 import {
   Box,
   Card,
@@ -22,40 +24,40 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 /* ============================================================
-   MOCK TOGGLE (no visible indicators)
-   ============================================================ */
-const USE_MOCK = true;
-
-/* ============================================================
    Types
    ============================================================ */
 type Match = {
   _id: string;
-  userA: string;
-  userB: string;
+  userA: string | { _id?: string; id?: string };
+  userB: string | { _id?: string; id?: string };
   lastMessageAt?: string;
 };
 
 type Message = {
   _id: string;
-  matchId: string;
-  senderId: string;
+  matchId: string | { _id?: string; id?: string };
+  senderId: string | { _id?: string; id?: string };
   body: string;
   createdAt: string;
   updatedAt: string;
 };
 
 /* ============================================================
-   Helpers
+   Helpers (normalization, auth, validation)
    ============================================================ */
+
+// Normalize possible backend wrappers without exposing internals in UI
 function normalizeMatches(payload: unknown): Match[] {
   if (Array.isArray(payload)) return payload as Match[];
   if (payload && typeof payload === "object") {
     const o = payload as Record<string, any>;
-    if (Array.isArray(o.matches)) return o.matches as Match[];
-    if (Array.isArray(o.value)) return o.value as Match[];
-    if (Array.isArray(o.data)) return o.data as Match[];
-    if (Array.isArray(o.result)) return o.result as Match[];
+    return (
+      o.matches ||
+      o.value ||
+      o.data ||
+      o.result ||
+      []
+    ) as Match[];
   }
   return [];
 }
@@ -64,14 +66,30 @@ function normalizeMessages(payload: unknown): Message[] {
   if (Array.isArray(payload)) return payload as Message[];
   if (payload && typeof payload === "object") {
     const o = payload as Record<string, any>;
-    if (Array.isArray(o.messages)) return o.messages as Message[];
-    if (Array.isArray(o.lastMessages)) return o.lastMessages as Message[];
-    if (Array.isArray(o.data)) return o.data as Message[];
-    if (Array.isArray(o.result)) return o.result as Message[];
+    return (
+      o.messages ||
+      o.lastMessages ||
+      o.data ||
+      o.result ||
+      []
+    ) as Message[];
   }
   return [];
 }
 
+// Safely extract an id from a string or populated object
+const idOf = (v: any): string | null => {
+  if (!v) return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "object") return v._id || v.id || null;
+  return null;
+};
+
+// Basic 24-hex ObjectId validation to avoid accidental malformed calls
+const isValidObjectId = (s: string | null | undefined) =>
+  !!s && /^[a-f0-9]{24}$/i.test(s);
+
+// Decode JWT without trusting it beyond basic claims discovery
 function decodeJwt(token: string): any | null {
   try {
     const payloadB64 = token.split(".")[1];
@@ -88,14 +106,14 @@ function decodeJwt(token: string): any | null {
   }
 }
 
+// Fallback header helper if interceptors were not yet initialized
 const getToken = () => localStorage.getItem("accessToken") || "";
-
 const authHeader = () => {
   const t = getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 };
 
-// resolve base each call (avoids memo timing)
+// Resolve base URL each call to avoid timing issues and keep requests off the Vite host
 const apiUrl = (path: string) => {
   const base =
     (axios.defaults as any)?.baseURL ||
@@ -105,119 +123,44 @@ const apiUrl = (path: string) => {
   return clean ? `${clean}${path}` : path;
 };
 
-// quick objectId-like generator for mock messages
-function newObjectId() {
-  const ts = Math.floor(Date.now() / 1000).toString(16);
-  const rnd = Array.from({ length: 16 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join("");
-  return (ts + rnd).slice(0, 24);
+// Merge arrays by unique _id to avoid duplicates during polling
+function uniqueById<T extends { _id: string }>(arr: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of arr) {
+    if (!seen.has(item._id)) {
+      seen.add(item._id);
+      out.push(item);
+    }
+  }
+  return out;
 }
-
-/* ============================================================
-   MOCK DATA (Harry ↔ Elise) — perspective auto from JWT email
-   ============================================================ */
-
-const HARRY_ID = "68dd54137b0430ce890ed2b5";
-const ELISE_EMAIL = "elise9@example.com";
-const ELISE_ID = "68dd54137b0430ce890ed2b6";
-const MATCH_ID = "66aa11bb22cc33dd44ee55ff";
-
-// in-memory store so “send” feels real
-const MockDB = {
-  matches: [
-    {
-      _id: MATCH_ID,
-      userA: HARRY_ID,
-      userB: ELISE_ID,
-      lastMessageAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(), // 2 mins ago
-    },
-  ] as Match[],
-  messages: [
-    {
-      _id: newObjectId(),
-      matchId: MATCH_ID,
-      senderId: HARRY_ID,
-      body: "Hey Elise",
-      createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-    },
-    {
-      _id: newObjectId(),
-      matchId: MATCH_ID,
-      senderId: ELISE_ID,
-      body: "Hi Harry! All good here.",
-      createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-    },
-  ] as Message[],
-};
-
-const MockApi = {
-  async getMatches(): Promise<Match[]> {
-    await new Promise((r) => setTimeout(r, 180));
-    return [...MockDB.matches].sort(
-      (a, b) =>
-        new Date(b.lastMessageAt || 0).getTime() -
-        new Date(a.lastMessageAt || 0).getTime()
-    );
-  },
-  async getMessages(matchId: string, limit = 50): Promise<Message[]> {
-    await new Promise((r) => setTimeout(r, 140));
-    return MockDB.messages
-      .filter((m) => m.matchId === matchId)
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
-      .slice(-limit);
-  },
-  async sendMessage(matchId: string, senderId: string, body: string) {
-    await new Promise((r) => setTimeout(r, 120));
-    const now = new Date().toISOString();
-    const msg: Message = {
-      _id: newObjectId(),
-      matchId,
-      senderId,
-      body,
-      createdAt: now,
-      updatedAt: now,
-    };
-    MockDB.messages.push(msg);
-    const match = MockDB.matches.find((m) => m._id === matchId);
-    if (match) match.lastMessageAt = now;
-    return { ok: true, message: msg };
-  },
-};
 
 /* ============================================================
    Component
    ============================================================ */
 export default function Messages() {
+  // Left pane: match list
   const [matches, setMatches] = useState<Match[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
+
+  // Selection
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
 
+  // Right pane: thread
   const [msgs, setMsgs] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
+
+  // Composer
   const [msgInput, setMsgInput] = useState("");
+  const [sending, setSending] = useState(false);
+
+  // Polling control and visibility pause
   const pollRef = useRef<number | null>(null);
 
-  // Figure out who's logged in:
-  // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
-  // - REAL: derive from localStorage.user or JWT claims.
+  // Me: derive a stable id from local user or JWT claims
   const token = getToken();
   const meId = useMemo(() => {
-    if (USE_MOCK) {
-      const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
-      if (email === ELISE_EMAIL) return ELISE_ID;
-      return HARRY_ID; // default to Harry
-    }
-    if (USE_MOCK) {
-      const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
-      if (email === ELISE_EMAIL) return ELISE_ID;
-      return HARRY_ID; // default to Harry
-    }
     try {
       const rawUser = localStorage.getItem("user");
       if (rawUser) {
@@ -236,8 +179,8 @@ export default function Messages() {
     }
   }, [token]);
 
-  // In real mode, block if not logged in. In mock, always allow.
-  if (!USE_MOCK && !token) {
+  // If not logged in, avoid unauthorized calls and redirect path remains explicit
+  if (!token) {
     return (
       <Box sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
@@ -256,128 +199,204 @@ export default function Messages() {
     );
   }
 
-  // Load matches
+  /* ---------------- Matches: load on mount ---------------- */
   useEffect(() => {
     let mounted = true;
+    const controller = new AbortController();
+
     (async () => {
       try {
         setLoadingMatches(true);
-        let list: Match[] = [];
-        if (USE_MOCK) {
-          list = await MockApi.getMatches();
-        } else {
-          const { data } = await axios.get(apiUrl("/match/matches"), {
-            headers: authHeader(),
-          });
-          list = normalizeMatches(data);
-        }
+
+        const res = await axios.get(apiUrl("/match/matches"), {
+          // Auth header is redundant with interceptor but kept as defense in depth
+          headers: authHeader(),
+          signal: controller.signal,
+        });
+
         if (!mounted) return;
-        setMatches(list);
-        if (!selectedMatchId && list.length > 0) {
-          setSelectedMatchId(list[0]._id);
+
+        const list = normalizeMatches(res.data);
+
+        // Filter to only threads that the current user belongs to (least-privilege UI)
+        const safeList = meId
+          ? list.filter((m) => {
+              const ua = idOf(m.userA);
+              const ub = idOf(m.userB);
+              return String(ua) === String(meId) || String(ub) === String(meId);
+            })
+          : list;
+
+        setMatches(safeList);
+
+        // Auto select first valid match
+        const firstId = safeList[0]?._id ?? null;
+        if (!selectedMatchId && firstId && isValidObjectId(firstId)) {
+          setSelectedMatchId(firstId);
         }
       } catch (err: any) {
-        console.error("Failed to load matches:", err);
-        const msg =
-          err?.response?.data?.message ??
-          err?.response?.data ??
-          "Failed to load matches";
-        toast.error(msg);
+        // Generic toast avoids leaking backend internals
+        console.error("Failed to load matches");
+        toast.error("Could not load matches");
       } finally {
         if (mounted) setLoadingMatches(false);
       }
     })();
+
     return () => {
       mounted = false;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [meId]);
 
-  // Load & poll messages
+  /* ---------------- Messages: load and poll ---------------- */
   useEffect(() => {
-    async function load() {
-      if (!selectedMatchId) return;
+    if (!selectedMatchId || !isValidObjectId(selectedMatchId)) return;
+
+    // Pause polling when tab is hidden to reduce load and avoid odd races
+    const visibilityHandler = () => {
+      if (document.hidden && pollRef.current) {
+        window.clearInterval(pollRef.current);
+        pollRef.current = null;
+      } else if (!document.hidden && !pollRef.current) {
+        pollRef.current = window.setInterval(load, 3_000);
+      }
+    };
+    document.addEventListener("visibilitychange", visibilityHandler);
+
+    const controller = new AbortController();
+
+    const load = async () => {
+      // Verify the selection still belongs to the current user before calling
+      const match = matches.find((m) => m._id === selectedMatchId);
+      if (meId && match) {
+        const ua = idOf(match.userA);
+        const ub = idOf(match.userB);
+        const member =
+          String(ua) === String(meId) || String(ub) === String(meId);
+        if (!member) {
+          toast.error("You do not have access to this conversation");
+          return;
+        }
+      }
+
       try {
         setLoadingMsgs(true);
-        let list: Message[] = [];
-        if (USE_MOCK) {
-          list = await MockApi.getMessages(selectedMatchId, 50);
-        } else {
-          const { data } = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
-            params: { limit: 50 },
-            headers: authHeader(),
-          });
-          list = normalizeMessages(data);
-        }
-        setMsgs(list);
+
+        const res = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
+          params: { limit: 50 },
+          headers: authHeader(),
+          signal: controller.signal,
+        });
+
+        const list = normalizeMessages(res.data);
+
+        // De-duplicate and keep chronological order for safe rendering
+        const deduped = uniqueById(
+          list.sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+        );
+
+        setMsgs(deduped);
       } catch (err: any) {
-        console.error("Failed to load messages:", err);
-        const msg =
-          err?.response?.data?.message ??
-          err?.response?.data ??
-          "Failed to load messages";
-        toast.error(msg);
+        console.error("Failed to load messages");
+        toast.error("Could not load messages");
       } finally {
         setLoadingMsgs(false);
       }
-    }
+    };
 
+    // Initial load
     load();
 
+    // Start polling
     if (pollRef.current) window.clearInterval(pollRef.current);
-    if (selectedMatchId) {
-      pollRef.current = window.setInterval(load, 3_000);
-    }
+    pollRef.current = window.setInterval(load, 3_000);
+
     return () => {
+      document.removeEventListener("visibilitychange", visibilityHandler);
       if (pollRef.current) window.clearInterval(pollRef.current);
       pollRef.current = null;
+      controller.abort();
     };
-  }, [selectedMatchId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMatchId, matches, meId]);
 
-  // Send (mock just appends; real would POST)
+  /* ---------------- Send message ---------------- */
   async function sendMessage() {
-    if (!selectedMatchId || !meId) return;
+    if (sending) return; // simple client-side throttle
+    if (!selectedMatchId || !isValidObjectId(selectedMatchId)) return;
+
     const body = msgInput.trim();
+
+    // Respect server-side maxlength and avoid empty sends
     if (!body) return;
+    if (body.length > 1000) {
+      toast.error("Message is too long");
+      return;
+    }
+
+    // Enforce membership client-side before POST (authorization is still server-side)
+    const match = matches.find((m) => m._id === selectedMatchId);
+    if (meId && match) {
+      const ua = idOf(match.userA);
+      const ub = idOf(match.userB);
+      const member = String(ua) === String(meId) || String(ub) === String(meId);
+      if (!member) {
+        toast.error("You do not have access to this conversation");
+        return;
+      }
+    }
 
     try {
-      if (USE_MOCK) {
-        const res = await MockApi.sendMessage(selectedMatchId, meId, body);
-        if (res.ok && res.message) {
-          setMsgs((m) => [...m, res.message!]);
-          setMsgInput("");
-          return;
-        }
+      setSending(true);
+
+      const res = await axios.post<{ ok: boolean; message?: Message }>(
+        apiUrl(`/chat/${selectedMatchId}`),
+        { body },
+        { headers: authHeader() }
+      );
+
+      // If the API returns the created message, append optimistically; else refetch
+      if (res?.data?.ok && res?.data?.message) {
+        setMsgs((m) => uniqueById([...m, res.data.message!]));
+        setMsgInput("");
       } else {
-        const { data } = await axios.post<{ ok: boolean; message?: Message }>(
-          apiUrl(`/chat/${selectedMatchId}`),
-          { body },
-          { headers: authHeader() }
-        );
-        if (data?.ok && data?.message) {
-          setMsgs((m) => [...m, data.message!]);
-          setMsgInput("");
-          return;
-        }
-        // fallback: refetch
-        const { data: reload } = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
+        // Fallback to read-after-write for consistency
+        const reload = await axios.get(apiUrl(`/chat/${selectedMatchId}`), {
           params: { limit: 50 },
           headers: authHeader(),
         });
-        setMsgs(normalizeMessages(reload));
+        setMsgs(
+          normalizeMessages(reload.data).sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          )
+        );
         setMsgInput("");
       }
     } catch (err: any) {
-      console.error("Send failed:", err);
-      toast.error(err?.response?.data?.message ?? err?.response?.data ?? "Failed to send");
+      console.error("Send failed");
+      toast.error("Could not send message");
+    } finally {
+      setSending(false);
     }
   }
 
+  /* ---------------- UI helpers ---------------- */
   const otherUserIdOf = (m: Match) => {
     if (!meId) return null;
-    return String(m.userA) === String(meId) ? String(m.userB) : String(m.userA);
+    const ua = idOf(m.userA);
+    const ub = idOf(m.userB);
+    return String(ua) === String(meId) ? ub : ua;
   };
 
+  /* ============================================================
+     Render (safe text rendering; no HTML injection)
+     ============================================================ */
   return (
     <Box sx={{ flexGrow: 1 }}>
       <Container maxWidth="xl" sx={{ mb: 4, mt: 6 }}>
@@ -398,7 +417,6 @@ export default function Messages() {
               ) : matches.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   No matches found for your account yet.
-                  No matches found for your account yet.
                 </Typography>
               ) : (
                 <List dense>
@@ -409,12 +427,16 @@ export default function Messages() {
                       <ListItem key={m._id} disablePadding>
                         <ListItemButton
                           selected={!!selected}
-                          onClick={() => setSelectedMatchId(m._id)}
+                          onClick={() =>
+                            isValidObjectId(m._id)
+                              ? setSelectedMatchId(m._id)
+                              : toast.error("Invalid conversation id")
+                          }
                         >
                           <ListItemText
                             primary={
                               otherId
-                                ? `Match ${otherId.slice(0, 6)}…`
+                                ? `Match ${String(otherId).slice(0, 6)}…`
                                 : `Match ${m._id.slice(0, 6)}…`
                             }
                             secondary={
@@ -461,7 +483,8 @@ export default function Messages() {
                 {loadingMsgs && <CircularProgress size={22} />}
                 {!loadingMsgs &&
                   msgs.map((m) => {
-                    const mine = meId && String(m.senderId) === String(meId);
+                    const mine =
+                      meId && String(idOf(m.senderId)) === String(meId);
                     return (
                       <Box
                         key={m._id}
@@ -476,6 +499,7 @@ export default function Messages() {
                         }}
                         title={new Date(m.createdAt).toLocaleString()}
                       >
+                        {/* Safe text rendering only */}
                         <Typography variant="body2">{m.body}</Typography>
                       </Box>
                     );
@@ -487,7 +511,7 @@ export default function Messages() {
                 )}
               </Box>
 
-              {/* Composer */}
+              {/* Composer (client validates length and throttles sends) */}
               {selectedMatchId && (
                 <>
                   <Divider sx={{ my: 2 }} />
@@ -498,6 +522,7 @@ export default function Messages() {
                       placeholder="Type a message…"
                       value={msgInput}
                       onChange={(e) => setMsgInput(e.target.value)}
+                      inputProps={{ maxLength: 1000 }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -509,7 +534,7 @@ export default function Messages() {
                       color="primary"
                       aria-label="send"
                       onClick={sendMessage}
-                      disabled={!msgInput.trim()}
+                      disabled={sending || !msgInput.trim()}
                     >
                       <SendIcon />
                     </IconButton>
