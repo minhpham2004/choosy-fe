@@ -207,10 +207,6 @@ export default function Messages() {
   // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
   // - REAL: derive from localStorage.user or JWT claims.
   const token = getToken();
-  // Figure out who's logged in:
-  // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
-  // - REAL: derive from localStorage.user or JWT claims.
-  const token = getToken();
   const meId = useMemo(() => {
     if (USE_MOCK) {
       const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
