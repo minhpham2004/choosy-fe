@@ -1,3 +1,4 @@
+// Rayan El-Taher & Minh Pham
 import * as React from "react";
 import {
   Autocomplete,
@@ -19,8 +20,8 @@ import { AREA_KEYS } from "../../constant/area";
 import { INTEREST_KEYS } from "../../constant/interest";
 import { uploadToCloudinary } from "../../utils/upload-image";
 
+// Preference constants
 export const DISTANCE_TIERS = ["near", "mid", "far"] as const;
-
 export const GENDER_OPTIONS = [
   "Man",
   "Woman",
@@ -30,10 +31,12 @@ export const GENDER_OPTIONS = [
 ] as const;
 
 export default function Profile() {
+  // Avatar upload & preview state
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  // Main form state
   const [form, setForm] = React.useState({
     displayName: "",
     age: "",
@@ -51,12 +54,14 @@ export default function Profile() {
     },
   });
 
+  // Fetch and populate user's profile on mount
   React.useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await axios.get("/profiles/me");
         const profile = res.data;
 
+        // Populate form with server data
         setForm({
           displayName: profile.displayName || "",
           age: profile.age?.toString() || "",
@@ -64,7 +69,7 @@ export default function Profile() {
           avatarUrl: profile.avatarUrl || "",
           areaKey: profile.areaKey || "",
           discoverable: profile.discoverable ?? true,
-          gender: profile.gender || "", 
+          gender: profile.gender || "",
           interests: profile.interests || [],
           prefs: {
             minAge: profile.prefs?.minAge ?? 18,
@@ -74,11 +79,10 @@ export default function Profile() {
           },
         });
 
+        // Display saved or pending avatar
         if (profile.avatarUrl) {
-          setPhotoPreview(profile.avatarUrl); // Show saved avatar
-        }
-
-        if (!profile.avatarUrl) {
+          setPhotoPreview(profile.avatarUrl);
+        } else {
           const pending = localStorage.getItem("pendingAvatarUrl");
           if (pending) {
             setPhotoPreview(pending);
@@ -94,20 +98,29 @@ export default function Profile() {
     fetchProfile();
   }, []);
 
+  // Opens file picker
   const pickFile = () => fileInputRef.current?.click();
+
+  // Handles new file selection and validation
   const fileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file type and size
     if (!/^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/.test(file.type)) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Please choose an image under 5MB.");
       return;
     }
+
+    // Preview new image
     const nextUrl = URL.createObjectURL(file);
     if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
     setPhotoFile(file);
     setPhotoPreview(nextUrl);
   };
+
+  // Clears current photo preview
   const clearPhoto = () => {
     if (photoPreview && !form.avatarUrl) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(null);
@@ -115,6 +128,7 @@ export default function Profile() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Generic form field handlers
   const handleChange = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -125,10 +139,12 @@ export default function Profile() {
     }));
   };
 
+  // Upload avatar (if any) and save profile
   const saveProfile = async () => {
     try {
       let avatarUrl = form.avatarUrl;
 
+      // Upload new photo to Cloudinary
       if (photoFile) {
         toast.loading("Uploading photo...");
         avatarUrl = await uploadToCloudinary(photoFile);
@@ -136,6 +152,7 @@ export default function Profile() {
         toast.success("Photo uploaded!");
       }
 
+      // Prepare payload for API
       const payload = {
         ...form,
         age: Number(form.age),
@@ -149,7 +166,6 @@ export default function Profile() {
       };
 
       await axios.put("/profiles", payload);
-
       toast.success("Profile saved!");
     } catch (err: any) {
       toast.dismiss();
@@ -166,7 +182,7 @@ export default function Profile() {
           </Typography>
 
           <Stack spacing={2}>
-            {/* Avatar upload */}
+            {/* --- Avatar Upload --- */}
             <Box sx={{ textAlign: "center" }}>
               <Avatar
                 src={photoPreview ?? undefined}
@@ -192,6 +208,7 @@ export default function Profile() {
               />
             </Box>
 
+            {/* --- Profile Fields --- */}
             <TextField
               label="Display Name"
               fullWidth
@@ -205,7 +222,8 @@ export default function Profile() {
               value={form.age}
               onChange={(e) => handleChange("age", e.target.value)}
             />
-            
+
+            {/* Gender dropdown */}
             <TextField
               select
               label="Gender"
@@ -219,7 +237,7 @@ export default function Profile() {
                 </MenuItem>
               ))}
             </TextField>
-          
+
             <TextField
               label="Bio"
               multiline
@@ -229,7 +247,7 @@ export default function Profile() {
               onChange={(e) => handleChange("bio", e.target.value)}
             />
 
-            {/* AreaKey dropdown */}
+            {/* Area selection */}
             <TextField
               select
               label="Area"
@@ -257,7 +275,7 @@ export default function Profile() {
               label="Discoverable"
             />
 
-            {/* Interests multi select */}
+            {/* Interests multi-select */}
             <Autocomplete
               multiple
               options={INTEREST_KEYS as unknown as string[]}
@@ -272,10 +290,12 @@ export default function Profile() {
               )}
             />
 
-            {/* Preferences */}
+            {/* --- Preferences Section --- */}
             <Typography variant="subtitle1" sx={{ mt: 2 }}>
               Preferences
             </Typography>
+
+            {/* Age range */}
             <Stack direction="row" spacing={2}>
               <TextField
                 label="Min Age"
@@ -291,6 +311,7 @@ export default function Profile() {
               />
             </Stack>
 
+            {/* Distance filter */}
             <TextField
               select
               label="Max Distance"
@@ -307,6 +328,7 @@ export default function Profile() {
               ))}
             </TextField>
 
+            {/* Allowed areas */}
             <Autocomplete
               multiple
               options={AREA_KEYS as unknown as string[]}
@@ -321,6 +343,7 @@ export default function Profile() {
               )}
             />
 
+            {/* Save profile button */}
             <Button variant="contained" fullWidth onClick={saveProfile}>
               Save Profile
             </Button>

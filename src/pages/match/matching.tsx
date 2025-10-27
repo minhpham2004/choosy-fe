@@ -1,3 +1,4 @@
+// Minh Pham
 import {
   Box,
   Card,
@@ -30,6 +31,7 @@ import {
 import ReportButton from "./report";
 import { motion } from "framer-motion";
 
+// Basic profile type for a potential match
 type Profile = {
   userId: string;
   displayName: string;
@@ -41,9 +43,12 @@ type Profile = {
 };
 
 export default function Matching() {
+  // Current candidate profile shown to user
   const [candidate, setCandidate] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+
+  // Menu state for "More options"
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
@@ -52,11 +57,13 @@ export default function Matching() {
     setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
+  // Fetch a candidate and like count on mount
   useEffect(() => {
     fetchCandidate();
     fetchLikes();
   }, []);
 
+  // Fetch next candidate from API
   const fetchCandidate = async () => {
     try {
       setLoading(true);
@@ -70,6 +77,7 @@ export default function Matching() {
     }
   };
 
+  // Fetch total number of likes received
   const fetchLikes = async () => {
     try {
       const res = await axios.get("/match/likes");
@@ -80,6 +88,7 @@ export default function Matching() {
     }
   };
 
+  // Handles like / dislike actions
   const swipe = async (action: "like" | "dislike") => {
     if (!candidate) return;
     try {
@@ -88,6 +97,7 @@ export default function Matching() {
         action,
       });
 
+      // Different toast messages based on outcome
       if (res.data?.matched) {
         toast.success(`Matched with ${candidate.displayName}!`);
       } else if (action === "like") {
@@ -103,13 +113,20 @@ export default function Matching() {
     }
   };
 
+  // Block current candidate
   const blockUser = async () => {
     if (!candidate) return;
     try {
-      await axios.post("/match/block", { toUserId: candidate.userId });
+      await axios.post("/block", { blockedId: candidate.userId });
       toast.success(`${candidate.displayName} has been blocked`);
-    } catch (err) {
-      toast.error("Failed to block user");
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        toast.error(`${candidate.displayName} is already blocked`);
+      } else if (err.response?.status === 400) {
+        toast.error("Invalid user ID");
+      } else {
+        toast.error("Failed to block user");
+      }
     } finally {
       fetchCandidate();
       fetchLikes();
@@ -128,7 +145,7 @@ export default function Matching() {
       }}
     >
       <Container maxWidth="sm" sx={{ mb: 6, mt: 6 }}>
-        {/* Header */}
+        {/* Header: title + likes button */}
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -152,8 +169,8 @@ export default function Matching() {
           </Badge>
         </Stack>
 
-        {/* Candidate Card */}
         {candidate ? (
+          // Animated candidate card
           <motion.div
             key={candidate.userId}
             initial={{ opacity: 0, y: 30 }}
@@ -181,7 +198,7 @@ export default function Matching() {
                 }}
               />
 
-              {/* Gradient + Text Overlay */}
+              {/* Profile overlay details */}
               <Box
                 sx={{
                   position: "absolute",
@@ -223,6 +240,7 @@ export default function Matching() {
                   </Typography>
                 )}
 
+                {/* Interest tags */}
                 <Stack
                   direction="row"
                   spacing={0.8}
@@ -244,7 +262,7 @@ export default function Matching() {
               </Box>
             </Card>
 
-            {/* Action Buttons */}
+            {/* Action buttons */}
             <Stack
               direction="row"
               justifyContent="center"
@@ -252,6 +270,7 @@ export default function Matching() {
               spacing={3}
               sx={{ mt: 3 }}
             >
+              {/* Dislike */}
               <Tooltip title="Skip / Dislike" arrow>
                 <IconButton
                   onClick={() => swipe("dislike")}
@@ -269,6 +288,7 @@ export default function Matching() {
                 </IconButton>
               </Tooltip>
 
+              {/* Like */}
               <Tooltip title="Like" arrow>
                 <IconButton
                   onClick={() => swipe("like")}
@@ -286,6 +306,7 @@ export default function Matching() {
                 </IconButton>
               </Tooltip>
 
+              {/* More options menu */}
               <Tooltip title="More Options" arrow>
                 <IconButton
                   onClick={handleMenuOpen}
@@ -328,6 +349,7 @@ export default function Matching() {
             </Stack>
           </motion.div>
         ) : (
+          // Empty state when no candidates available
           <Card
             sx={{
               borderRadius: 4,

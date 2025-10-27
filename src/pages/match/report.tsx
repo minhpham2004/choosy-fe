@@ -1,3 +1,4 @@
+// Anthony Alexis
 import {
   Button,
   Dialog,
@@ -29,11 +30,23 @@ export default function ReportButton({ candidateId }: { candidateId: string }) {
 
     try {
       setLoading(true);
-      await axios.post("/match/report", { toUserId: candidateId, reason });
+
+      const token = localStorage.getItem("authToken");
+      await axios.post(
+        "/report",
+        { reportedId: candidateId, reason },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       toast.success("Report submitted successfully");
       handleClose();
-    } catch (err) {
-      toast.error("Failed to submit report");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to submit report");
     } finally {
       setLoading(false);
     }
@@ -41,11 +54,7 @@ export default function ReportButton({ candidateId }: { candidateId: string }) {
 
   return (
     <>
-      <Button
-        onClick={handleOpen}
-        variant="contained"
-        color="warning"
-      >
+      <Button onClick={handleOpen} variant="contained" color="warning">
         Report
       </Button>
 
@@ -65,7 +74,9 @@ export default function ReportButton({ candidateId }: { candidateId: string }) {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+          <Button onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
           <Button onClick={submitReport} disabled={loading} color="warning">
             Submit
           </Button>

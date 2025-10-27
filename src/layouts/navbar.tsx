@@ -1,3 +1,4 @@
+// Nathan Ravasini & Minh Pham
 import { AppBar, Box, Button, Toolbar, Typography } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -107,9 +108,9 @@ export default function Navbar() {
             className="nav-btn"
             color="inherit"
             component={RouterLink}
-            to="/profile"
+            to="/settings/profile"
           >
-            Profile
+            Settings
           </Button>
           <Button
             className="nav-btn"

@@ -1,3 +1,4 @@
+// Nathan Ravasini & Rayan El-Taher
 import * as React from "react";
 import {
   Autocomplete,
@@ -17,9 +18,6 @@ import { INTEREST_KEYS } from "../../constant/interest";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { uploadToCloudinary } from "../../utils/upload-image";
-
-// type AreaKey = typeof AREA_KEYS[number];
-// type Interest = typeof INTEREST_KEYS[number];
 
 // Types & Validation Rules
 type registerForm = {
@@ -90,6 +88,7 @@ export default function Register() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  // Centralised validator
   function validate(values: Partial<registerForm> = {}): registerErrors {
     const v = { ...form, ...values };
     const next: registerErrors = {};
@@ -114,8 +113,12 @@ export default function Register() {
       else if (n < MIN_AGE) next.age = `You must be at least ${MIN_AGE}`;
     }
      
+    // Unused fields
     //Bio
     // if (v.bio && v.bio.length > 500) next.bio = "Bio must be 500 characters or less";
+
+    // type AreaKey = typeof AREA_KEYS[number];
+    // type Interest = typeof INTEREST_KEYS[number];
 
     return next;
   }   
@@ -123,6 +126,8 @@ export default function Register() {
   function handleChange<T extends keyof registerForm>(field: T, value: registerForm[T]) {
     const nextForm = { ...form, [field]: value};
     setForm(nextForm);
+
+    // Revalidate the changed field once the user submits
     if (!submitted) return;
     setErrors((prev) => ({ ...prev, ...validate({ [field]: value }) }));
   }

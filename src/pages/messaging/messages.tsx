@@ -1,4 +1,4 @@
-// src/pages/messaging/messages.tsx
+// Harry Solterbeck
 import {
   Box,
   Card,
@@ -207,7 +207,16 @@ export default function Messages() {
   // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
   // - REAL: derive from localStorage.user or JWT claims.
   const token = getToken();
+  // Figure out who's logged in:
+  // - MOCK: decide by JWT email (Elise vs Harry). If no token/email, default Harry.
+  // - REAL: derive from localStorage.user or JWT claims.
+  const token = getToken();
   const meId = useMemo(() => {
+    if (USE_MOCK) {
+      const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
+      if (email === ELISE_EMAIL) return ELISE_ID;
+      return HARRY_ID; // default to Harry
+    }
     if (USE_MOCK) {
       const email = (token ? decodeJwt(token)?.email : null)?.toLowerCase();
       if (email === ELISE_EMAIL) return ELISE_ID;
@@ -392,6 +401,7 @@ export default function Messages() {
                 <CircularProgress size={22} />
               ) : matches.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
+                  No matches found for your account yet.
                   No matches found for your account yet.
                 </Typography>
               ) : (

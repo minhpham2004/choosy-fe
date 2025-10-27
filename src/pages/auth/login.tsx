@@ -1,3 +1,4 @@
+// Nathan Ravasini & Anthony Alexis
 import {
   Box,
   Button,
@@ -16,7 +17,7 @@ type LoginErrors = {
   password?: string;
 };
 
-const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //Email Regular Expression
+const emailFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Email Regular Expression
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -28,10 +29,12 @@ export default function Login() {
   function validate(values = { email, password }) {
     const next: LoginErrors = {};
     if (!values.email) next.email = "Email is required";
-    else if (!emailFormat.test(values.email)) next.email = "Enter a valid email address";
+    else if (!emailFormat.test(values.email))
+      next.email = "Enter a valid email address";
 
     if (!values.password) next.password = "Password is required";
-    else if (values.password.length < 8) next.password = "Password must be 8 or more characters";
+    else if (values.password.length < 8)
+      next.password = "Password must be 8 or more characters";
 
     return next;
   }
@@ -44,16 +47,25 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const {data} = await axios.post("/auth/login", { email, password });
+      const { data } = await axios.post("/auth/login", { email, password });
 
       const token = data?.accessToken;
-      if (!token) throw new Error ("No token returned");
-      localStorage.setItem("accessToken", token);
+      const user = data?.user;
 
+      if (!token) throw new Error("No token returned");
+
+      if (user?.status === "banned") {
+        toast.error("Your account has been banned.");
+        return;
+      }
+
+      localStorage.setItem("accessToken", token);
       toast.success("Login successful!");
       console.log("Logged in! Token saved:", token);
 
-      setTimeout(() => { window.location.href = "/"; }, 1000);
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     } catch (err: any) {
       const message =
         err.response?.data?.message || err.response?.data || err.message;
@@ -63,8 +75,6 @@ export default function Login() {
       setLoading(false);
     }
   }
-
-  // After the first submit, re-validate on change so errors clear when the user fixes the inputs
 
   function onEmailChange(v: string) {
     setEmail(v);
@@ -94,7 +104,7 @@ export default function Login() {
               value={email}
               onChange={(e) => onEmailChange(e.target.value)}
               error={submitted && !!errors.email}
-              helperText={submitted ? errors.email : ""}             
+              helperText={submitted ? errors.email : ""}
             />
 
             <TextField
@@ -108,16 +118,17 @@ export default function Login() {
             />
 
             <Button
-              loading={loading}
+              disabled={loading}
               variant="contained"
               fullWidth
               onClick={handleLogin}
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </Button>
 
             <Typography>
-              Don&apos;t have an account? <a href="/register">Register Now.</a>
+              Don&apos;t have an account?{" "}
+              <a href="/register">Register Now.</a>
             </Typography>
           </Stack>
         </CardContent>
