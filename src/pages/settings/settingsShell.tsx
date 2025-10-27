@@ -1,3 +1,4 @@
+// Nathan Ravasini
 import { Outlet } from "react-router-dom";
 import { Box, Stack } from "@mui/material";
 import SettingsSidebar from "./settingsSideBar";

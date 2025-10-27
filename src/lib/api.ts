@@ -1,4 +1,4 @@
-// src/lib/api.ts
+// Nathan Ravasini
 import axios from 'axios';
 
 export const api = axios.create({

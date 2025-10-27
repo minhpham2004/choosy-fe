@@ -1,4 +1,4 @@
-// src/pages/messaging/messages.tsx
+// Harry Solterbeck
 import {
   Box,
   Card,
